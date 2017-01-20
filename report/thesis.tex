@@ -1,0 +1,103 @@
+\documentclass[a4paper,11pt]{kth-mag}
+\usepackage[T1]{fontenc}
+\usepackage{textcomp}
+\usepackage{lmodern}
+\usepackage[utf8]{inputenc}
+\usepackage[swedish,english]{babel}
+\usepackage{nada-ex}
+\title{Inside the Black Box: How to Explain Individual Predictions of a Machine Learning Model}
+\subtitle{How to automatically generate insights on predictive model outputs, and gain 
+	a better understanding on how the model predicts each individual data point.}
+\author{Marc Beillevaire}
+\date{December 2016}
+\blurb{
+	Master's Thesis at CSC \\
+	Supervisor: Hedvig Kjellström \\
+	Examiner: Danica Kragic
+}
+\trita{TRITA xxx yyyy-nn}
+\begin{document}
+\frontmatter
+\maketitle
+
+
+\begin{abstract}
+Machine learning models are becoming more and more powerful and accurate, but their good predictions usually come with a high complexity. Depending on the situation, such a lack of interpretability can be an important and blocking issue. This is especially the case when trust is needed on the user side in order to take a decision based on the model prediction.
+
+In this thesis, several explanation methods are described and compared on multiple datasets (text data, numerical), on classification and regression problems.
+\end{abstract}
+
+\clearpage
+\selectlanguage{swedish}
+\begin{abstract}
+  SOME SWEDISH IN HERE....
+\end{abstract}
+\selectlanguage{english}
+\clearpage
+\tableofcontents
+\mainmatter
+\chapter{Introduction: what is an explanation ?}
+
+Predictive models using machine learning are getting more and more efficient while also spreading in many area. In the industrial sector, many companies are starting to use their own data to optimize various processes. In online marketplaces customers' data are constantly processed by machine learning algorithms, whether it is for recommendation or to track potential fraudsters.
+
+Yet, while most companies would like to set up production pipelines for their data, a strong limitation usually still holds: when the prediction is sent to a human decision maker, trust becomes at least as important as the prediction itself. People cannot willingly accept to take decision just because a computer said so, and they need to be provided with insights and explanations on why the model outputs a given value.
+
+This is the case in many areas: in fraud detection, taking an action means decreasing the user experience, hence such models would be applied only if the business owners trusts them to reduce the company's losses. The same apply to predictive maintenance: regular operations on the equipment based on a machine learning algorithm will be put in place only if the decision makers believe the algorithm can effectively predict the next failures.
+
+This need for insights on individual predictions is going to be more significant in the years to come in the European Union. Indeed in April 2016, the European Parliament adopted the General Data Protection Regulation (GDPR) [  link  ]. Besides new rules regarding data protection, it provides every European citizen a \textit{right to explanation}: every decision having an impact on someone's life will have to be motivated by an explanation, even when the decision is taken by an algorithm. For instance, a bank agency won't be able to refuse a loan to an individual based only on an algorithmic decision.
+
+ This master thesis's goal will be, first, to define explanations more precisely, and investigate several solutions to explain predictions. We will compare them and evaluate the benefits of each of them and their limits.
+
+\section{What are explanations ?}
+
+Explaining a prediction in Machine Learning means give insights about the predictions of a model. Such insights are information about how each input influenced the output. Thus an explanation can be defined as \textit{a set of features} that influenced the most a specific prediction, along with \textit{an associated weight} to each variable to assess quantitatively their influence on the prediction.
+
+Yet, these influences can be defined by several ways.
+
+\section{Contribution to the output value}
+
+First, we can define the influence as a contribution to the prediction in a way that summing the influences to all the features sums to the predictions.
+
+\section{How the output changes}
+
+\chapter{Practical methods and implementations}
+
+Aliquam et ante.
+
+\section{Model-dependent explanations}
+
+\subsection{Linear models}
+
+Vestibulum dolor dolor
+
+\subsection{Tree based models}
+
+Sed lobortis neque non mauris.
+
+\section{Model-agnostic explanations}
+
+\subsection{Lime}
+Sed laoreet tellus in massa.
+
+\subsection{Partial dependancies}
+Sed laoreet tellus in massa.
+
+\subsection{Other papers}
+Sed laoreet tellus in massa.
+
+\chapter{Experiments on datasets}
+Aliquam quis nibh quis justo elementum viverra.
+
+\section{Numerical datasets}
+Suspendisse id mauris a justo venenatis feugiat.
+
+\section{Categorical datasets}
+Suspendisse id mauris a justo venenatis feugiat.
+
+\section{Mixed types}
+Suspendisse id mauris a justo venenatis feugiat.
+
+\end{document}
+\endinput
+%%
+%% End of file `kth-ex1.tex'.

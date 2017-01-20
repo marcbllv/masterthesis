@@ -1,0 +1,23 @@
+Introduction
+
+1. What is an explanation
+    Several types:
+    1.1 Contribution to output
+    1.2 How the output changes when changing features
+
+2. How we can do it - articles and implementations
+    2.1 Linear models --> easy and straightforward
+    2.2 Treeinterpretor -> only for trees, don't give insight about what happends when changing the feature
+    2.3 Partial dependencies -> Cool but hard to compute
+    2.4 Lime -> Cool :) Talk about the implementation and binning - Also talk about alime (new article by M Ribeiro)
+    2.5 Others that work less : game theory, explanation vectors
+
+3. Experiments on datasets - Lime, treeinterpreter, partial dep (?)
+    3.1 Numerical datasets -> Kaggle human/robot, Kaggle House market Ames IA only numerical
+    3.2 Categorical datasets -> German credit only categorical
+    3.3 Mixing both -> Kaggle house market, german credit
+
+4. Issues
+    4.1 Treeinterpretor: no insight on whats going on when moving feature, not model agnostic (only works on tree methods)
+    4.2 Lime: Works less with skewed distribs, how to choose kernel_width, quite long to compute when many samples needed
+    4.3 Partial deps: long to compute
