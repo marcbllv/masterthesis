@@ -1,0 +1,104 @@
+\documentclass[a4paper]{article}
+
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{tabularx}
+\usepackage[colorinlistoftodos]{todonotes}
+\usepackage[backend=biber]{biblatex}
+
+\addbibresource{ressources.bib}
+
+\setlength{\parskip}{0.5em}
+
+\title{Master Thesis Project Specifications \\ — \\ Inside the Black Box: How to Explain Individual Predictions of a Machine Learning Model}
+\author{Marc Beillevaire \\ marcbei@kth.se}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This document describes the specifications of my master thesis. This project will be carried on at Dataiku, a french datascience start-up in Paris. Into their datascience team, I will be researching on how to better understand predictions made by a machine learning algorithm, which is quite difficult in most cases today. This document provides both the project description and practical information on how it will be conducted.
+\end{abstract}
+
+
+\section{Supervisor at Dataiku and ressources}
+
+Pierre Gutierrez (pierre.gutierrez@dataiku.com), datascientist at Dataiku will supervise this project in the company. I will have weekly (at least) meetups with him to check how the project is going on.
+
+Dataiku provides me with a computer and a \textit{Dataiku Data Science Studio} license to test my results in the company's software.
+
+\section{Background and objectives}
+
+Dataiku is a software editor that develops Dataiku DSS (\textit{Data Science Studio}), a collaborative data science platform that enables companies to efficiently process their data and build machine learning models. Dataiku also have an important datascience team that provide support in datascience, along with the software, for the clients.
+
+Yet, most of these algorithms today still look like black boxes on the user side: it is not easy - if not impossible - to understand how a given prediction is made by, let's say, a Random Forest algorithm with several hundreds of trees. Several tools already exist to understand models but there are mostly global coefficients like the variable importance in a decision tree.
+
+Yet in many cases having an insight locally would be really helpful to users. An insurance company would like to know why a particular client has been detected as a fraudster, or a manufacturer doing predictive maintenance would like to know not only which device is likely to break soon but also how this device's lifetime could be increased practically. Moreover a European regulation has been adopted by the EU parliament and will force companies to provide \textit{"explanations"} on every decision made by an algorithm that impact their client. Even if the application conditions has not been stated clearly up to now, this will require good explanations system to understand a particular decision. For instance, someone who has been refused a load could ask the bank for a specific and logical reason, even if this decision has been obtained by a computer.
+
+My Master Thesis is therefore focused on finding \textit{explanations} on predictive models outputs, at the prediction level.
+
+The main goals are: exploring bibliography on the subject, testing several methods on various datasets and linking theses methods to Dataiku DSS to make it easy to explain predictions.
+
+\section{Research question and methodology}
+
+As stated before, the research will focus on how to produce understandable explanations related to a prediction made by a machine learning algorithm.
+
+The goodness of the output of such an automatic explainer is not easy to quantify, as it relies on the user's knowledge of the data, and its ability to judge the pertinence of a prediction and an explanation. So the qualitative question would be: \textit{How to extract explanations on individual predictions from a predictive model ?}
+
+Yet providing explanations can have a measurable impact when an algorithm is relying on the wrong features.
+
+When an algorithm relies on the wrong variables to make a prediction, the problem is not the prediction in itself, that can be true, but the lack of generalizability of the algorithm. Thoses bad or wrong variables are called so because they are correlated to the target on the training sample dataset, but not on the whole individuals in real life. Thus such predictive model relying on the wrong variables are expect to generalize badly on a different dataset.
+
+From this point comes the quantitative question: \textit{Is it possible to improve the score of a bad model that relies on the wrong variables using a explanation algorithm ?}
+
+\section{Evaluation method}
+
+Several explainers will be tested, and for each of them the goal would be to improve the score of a bad predictive model. This will need one train dataset where "bad" features are correlated to the output as well as a validation set where these features change. Therefore the bad model score should decrease on this validation set.
+
+The various methods will be evaluated using on several dataset from websites such as UCI, or Kaggle.
+
+Some datasets would probably better suits some methods, but to be genral enough, testing datasets should be diverse: regression and classification datasets, text data and tabular data, ...
+
+\section{Schedule}
+
+\begin{tabularx}{\linewidth}{lX}
+
+\textbf{30 Jan / week 5}: & Project specifications and pilot study \\
+
+\textbf{6 Feb / week 6}: & Going on with experiments and testing of implementations already performed at Dataiku. The focus will be on the quantitative evaluation of the performances of the tested algorithms. \\
+
+\textbf{13 Feb / week 7}: & Getting a plan set for the report, finishing testing algorithms and implementations. \\
+
+\textbf{20 Feb / week 8}: & Writing the report. \\
+
+\textbf{27 Feb / week 9}: & Writing the report, first Draft. \\
+
+\textbf{6 March / week 10}: & Report read again and mistakes fixed.
+
+\end{tabularx}
+
+\section{Pilot study}
+
+The bibliography study features in the Reference part below. It shows that this topic was only sparsely studied more than 5 years ago, but that more and more professors and PhD student has started to think about it in the past few years.
+
+\nocite{lime}
+\nocite{mythos}
+\nocite{treeinterpreter}
+\nocite{explvect}
+\nocite{gametheory}
+\nocite{euregulation}
+\nocite{healthcare}
+\nocite{trust}
+\nocite{documentclassif}
+\nocite{explainingclassif}
+\nocite{ice}
+\nocite{evolutionnary}
+\nocite{interpretingusing}
+\nocite{breastcancer}
+\nocite{sensitivity}
+
+\printbibliography
+
+\end{document}

@@ -1,0 +1,99 @@
+\documentclass[a4paper]{article}
+
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{tabularx}
+\usepackage[colorinlistoftodos]{todonotes}
+\usepackage[backend=biber]{biblatex}
+
+\addbibresource{ressources.bib}
+
+\setlength{\parskip}{0.5em}
+
+\title{Pilot Study\\ — \\ Inside the Black Box: How to Explain Individual Predictions of a Machine Learning Model}
+\author{Marc Beillevaire \\ marcbei@kth.se}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This is the pilot study for my master thesis for KTH Institute of technology, conducted at Dataiku, a datascience company in Paris. This documents aims at describing work related to the topic of this thesis: how to explain individual outputs of predictive models based on machine learning algorithms. This topic has already been studied by several research teams using many different approaches.
+\end{abstract}
+
+\section{Background and objectives}
+
+Today, most of machine learning algorithms look like black boxes from the user perspective: it is not easy - if not impossible - to understand how a given prediction is made by, let's say, a Random Forest with several hundreds of trees. Some tools already exist to understand models but they are mostly global insights, like the variable importance in a decision tree.
+
+Yet in many cases having a local insight, related to a particular prediction, would be really helpful to users. An insurance company would like to know why a particular client has been detected as a fraudster, or a manufacturer doing predictive maintenance would like to know not only which device is likely to break soon but also how this device's lifetime could be increased practically.
+
+There are several articles trying to formalize in a high level fashion what explanations are or should be -- \cite{trust} and \cite{mythos}. Another one focuses on the General Data Protection Regulation recently approved by the EU parliament -- \cite{euregulation}
+
+These articles does not provide technical solutions to the problem of finding good algorithms to extract explanations, but are essential to understand the concepts and what is at stake in interpretable explanations.
+
+\section{Related work}
+
+As this problem is about explaining models, there are two main solutions to it:
+
+\begin{itemize}
+	\item Model dependant explanations
+	\item Model agnostic explanations
+\end{itemize}
+
+\subsection{Model dependant explanations}
+
+The first one implies understand how a model is build, making use of its particular type, and extract explanations from it. This is usually faster to compute, but explanations of this kind are not generalizable to other types of models.
+
+An explaining algorithm for tree-based methods -- individual decision trees, random forests and gradient boosted trees -- has been developed by \citeauthor{treeinterpreter} in \cite{treeinterpreter}.
+When examining the prediction for a given point, his algorithm takes the same path in the tree as the original point. At each node, the tree splits part of the feature space into two smaller and disjoint subspaces. It is then possible to compute the difference of proportion of the predicted class in the bigger space and the smaller space where the point ended. This difference means that at a given node, the criterion changed the predicted class probability by the value of the difference computed before. The criterion is based on a single feature, therefore this feature's influence is the difference of proportion in the bigger space and the smaller space. To get the influence of all features, \citeauthor{treeinterpreter}'s algorithm considers all the split in the prediction's path in the tree.
+
+This way of exploring trees through the path of the original datapoint makes this algorithm efficient: its complexity is proportional to the height of the tree (as well as linear in the number of trees if the algorithm is an ensemble).
+
+There are also specific methods for linear models in a quite old book \cite{interpretingusing} by \citeauthor{interpretingusing}. Linear models are very used in areas where only causal relationships are desired, such as economics. The linearity makes the explanation very straightforward as decomposing the influence of each feature is very easy.
+
+\subsection{Model independent explanations}
+
+Although the previous methods are computationally efficient, they still rely on specific models. A model-independent algorithm would be preferable for at least two reasons: its ability to explain any type of classifiers and regressors, and the possibility to compare two explanations from two different model even from different types.
+
+Several algorithms has been developed, most notably: \cite{lime}, \cite{explvect}, \cite{explainingclassif}, \cite{evolutionnary}, \cite{gametheory}, \cite{ice}, \cite{sensitivity}.
+
+Some of them tries to estimate the local output distribution from the model like: \textit{Lime} \cite{lime} and \textit{explanation vectors} \cite{explvect}. If the model is a classifier that outputs probabilities, then the output distribution is a probability distribution in the feature space. \textit{Lime} algorithm by \citeauthor{lime} \cite{lime} aims at modeling this local distribution by a simpler model, namely a linear model with few variables that is therefore easy to interpret. \citeauthor{explvect}'s algorithm in \cite{explvect} mimic the local distribution using Gaussian kernel estimation, and then computes the local gradient of this estimated distribution.
+
+Thus, both these methods outputs what happens when the datapoint shifts a bit in the feature space, which is very convenient when someone wants to know how to optimize a model output by changing the variables.
+
+Other articles focus on changing the value of a given attribute in the input vector and measure how the model behave when this attribute is modified. This is how explanations are computed in \citetitle{explainingclassif} \cite{explainingclassif}: for each attribute $A_i$ they compute a probability difference:
+
+\[
+	\text{predDiff}_i(x) = f(x) - f(x \setminus A_i)
+\]
+
+as well as the information difference:
+
+\[
+	\text{infDiff}_i(x) = log p(y | x) - log p(y | x \setminus A_i)
+\] 
+
+This methods is somewhat similar to partial dependence plots, and to another article \cite{ice} where the authors develop a similar visualization tool called Individual Conditional Expectation plots. The principle is similar to computing a partial dependence plot, but instead of averaging it over all the examples, the authors decide to keep one curve for each instance. If the estimator is the function $f : (x_1, x_2, ..., x_n) \mapsto f(x_1, x_2, ... x_n)$, then for each example $i$ and feature $j$, a curve is drawn with the following shape:
+
+\[
+	x \mapsto f(x_1, ..., x_{j-1}, x, x_{j+1}, ..., x_n)
+\]
+
+This lets the user having far more insights on the model behaviour on individual instances, without being longer to compute than a partial dependence plot.
+
+Finally, another interesting approach in extracting explanation uses game theory and the \textit{Shapley value} \cite{gametheory}. The authors consider explanations as a set of feature influence, where each influence is the Shapley value of the feature. The Shapley value could be described as the influence of a feature regarding potential coalitions formed with other features. For example in the Council of the European Union, each country get a number of votes proportional to its population, and bigger countries have a larger power to make strong coalitions, while smaller ones have less. The Shapley value reflects this power. In the case of a machine learning model: features that are able to form strong "coalitions" to change the output of the model gain a large Shapley value, and should explain more importantly the outcome. 
+
+\subsection{Other articles}
+
+Some other articles proposes solutions for specific applications such as:
+
+\begin{itemize}
+	\item Textual data: \citetitle{documentclassif} \cite{documentclassif}
+	\item Health care data: \citetitle{healthcare} \cite{healthcare}, but this one is more about how to build intelligible models than understand complicated ones.
+	\item Breast cancer data: \citetitle{breastcancer}, by authors of \cite{gametheory}, \cite{sensitivity} and \cite{explainingclassif}.
+\end{itemize}
+
+\printbibliography
+
+\end{document}

@@ -8,6 +8,10 @@
 \usepackage[utf8]{inputenc}
 \usepackage[swedish,english]{babel}
 \usepackage{nada-ex}
+\usepackage{subcaption}
+\usepackage[backend=biber]{biblatex}
+
+\addbibresource{ressources.bib}
 
 \graphicspath{{img/}}
 
@@ -42,7 +46,24 @@ In this thesis, several explanation methods are described and compared on multip
 \clearpage
 \tableofcontents
 \mainmatter
-\chapter{Introduction: what is an explanation ?}
+
+
+
+\chapter{Introduction}
+
+This first chapter is an introduction to the problem raised in this master thesis and provides an overview on how it is structured. It first describes the backgrounds and motivations for this project, and set the research question as well as a high-level views on the methodology and the approach chosen to deal with it.
+
+\section{Background}
+
+This project has been conducted at \textit{Dataiku}, in Paris. Dataiku is a young startup developping \textit{Dataiku DSS} -- Dataiku Data Science Studio. This software is a collaborative plateform on which data scientists and data analysts can easily perform data processing operations, such as: collecting data, cleaning and preprocessing, training and applying machine learning algorithms as well as putting a process into production in a few clics.
+
+Besides developping Dataiku DSS, the company also helps companies to set up data science projects by providing both the technical solutions and the scientific expertise from Dataiku's data scientist team. Their customers are spread out around the world, and after securing a series A fundraising in October 2016, the company's next goal is to appear among the top data science plateforms in the USA anytime soon.
+
+The contact to the issues that Dataiku users are facing led to this project. Indeed, users are always looking for more trust and transparence towards the models they are using. This is the key point when the machine learning model is required for taking action. Thus, Dataiku's customers are often asking for more insights, and many of them especially want to know why a prediction has been made by a given model on a given example.
+
+This projects aimed at providing a selection of practical solutions to this problem to the Dataiku team, and simplify their use through Dataiku DSS plugins as well as webapps for visualization purposes.
+
+\section{Motivation}
 
 Predictive models using machine learning are getting more and more efficient while also spreading in many area. In the industrial sector, many companies are starting to use their own data to optimize various processes. In online marketplaces customers' data are constantly processed by machine learning algorithms, whether it is for recommendation or to track potential fraudsters.
 
@@ -50,19 +71,79 @@ Yet, while most companies are eager to set up very efficient predictive models, 
 
 This is the case in many areas: in fraud detection on an e-commerce website,  taking an action could mean adding another layer of security during a purchase like 3D security, which decreases the user experience and could lead to fewer purchases. The same apply to predictive maintenance models: maintenance operations on the equipment cost money, and such a predictive model would be put into production only if the company decision makers believe the algorithm can effectively predict the next failures in the equipment. Hence how efficient such models may be, they would only be applied if the business owners trusts them to effectively optimize the company's processes.
 
-This need for insights on individual predictions is going to be more significant in the years to come in the European Union. Indeed in April 2016, the European Parliament adopted \href{http://eur-lex.europa.eu/eli/reg/2016/679/oj}{the General Data Protection Regulation (GDPR)}. Besides new rules regarding data prhttp://eur-lex.europa.eu/eli/reg/2016/679/ojotection, it provides every European citizen a \textit{right to explanation}: every decision having an impact on someone's life will have to be motivated by an explanation, even when the decision is taken by an algorithm. For instance, a bank agency won't be able to refuse a loan to an individual based only on an algorithmic decision.
+This need for insights on individual predictions is going to be more significant in the years to come in the European Union. Indeed in April 2016, the European Parliament adopted \href{http://eur-lex.europa.eu/eli/reg/2016/679/oj}{the General Data Protection Regulation (GDPR)}. Besides new rules regarding data protection, it provides every European citizen a \textit{right to explanation}: every decision having an impact on someone's life will have to be motivated by an explanation, even when the decision is taken by an algorithm. For instance, a bank agency won't be able to refuse a loan to an individual based only on an algorithmic decision.
 
-This master thesis's goal will be, first, to define explanations more precisely. Then several solutions that proposes to explain predictions will be invastigated. Each of their benefits and limits will be compared and evaluated. Experiments will be made on various datasets, to assess the pertinence of each type of explanation.
-
-\section{What are explanations ?}
+\section{What should an explanation look like ?}
 
 Explaining a prediction in Machine Learning means give insights about the predictions of a model. Such insights should be informations about how the input values influenced the output produced by the model. 
 
-Moreover, trust in a model comes with understandability. So, as these explanations should be read by humans, they must be easily understood by them. For instance a list of the most influencial inputs for a given prediction cannot contain 100 items, otherwise understandability and therefore trust are lost.
+Moreover, trust in a model comes with understandability. So, as these explanations will be read by humans, they must be easily understood by them. For instance a list of the most influencial inputs for a given prediction cannot contain 100 items, otherwise understandability and therefore trust are lost.
 
-Thus an explanation can be defined as \textit{a set with a limited size of the features} that influenced the most a specific prediction. Along this set, \textit{an associated weight} to each variable can be added to assess quantitatively their relative influence on the prediction.
 
-Yet, these influences can be defined by several ways.
+[...] Déveloper en regardant les articles "méta" [...]
+
+\section{Problem statement and methodology}
+
+The goal of this thesis is to test several algorithms that automatically extract explanations from the model and to assess their goodness to compare them.
+
+These algorithms have two main purposes: effectively provide explanation for each prediction made by the model, and also assissing the goodness of the model. Indeed when looking at explanations, a user with prior knowledge on the data will be able to tell if the model relies on relevant features. If a model is trained and tested on a datasets where some features are falsly correlated to the output, then the model is probably not very good -- not generalizable on new data that does not provide these falsly correlated features.
+
+For instance, assume an image classification model only sees the blue sky to detect airplanes. If there are only planes in the sky, its score will probably be high. But what if a bird flying in the sky is set as input ? The model has a high probability to classify it as a plane.
+
+Using efficient explanations, this could be anticipated as the explanations for plane classification would show that only the blue sky matters to the model. But every human beign can clearly see that the model did not detect the real object. Therefore they could assess that this model is not good, no matter how high its accuracy is on the test set.
+
+In this project, this goodness measure will be used to test the algorithm instead of the model. The goal of the explanaining algorithm is to point out the wrongly used features on bad models. So our methodology will be the following:
+
+\begin{itemize}
+	\item Set up two datasets: one with both useful and useless features, another one containing only the good features
+	\item Train a model using the first dataset, test it on the second one
+	\item Extract explanations from predictions on several examples
+	\item Remove the bad features that popped up in the explanations, retrain the model
+	\item Check if the score improved on the second model
+\end{itemize}
+
+Here, we expect the score on the second second to be quite low, because the model learned some wrong correlations between useless features and the target. If the explanations are relevant, they should point out the most important features that are used by the model on several examples. Using the prior knowledge on the features, the bad ones can be removed, and the score on the second (clean) set should improve.
+
+\section{Framework}
+
+Most of the time explanations algorithms can work with any type of model: either regression or classification models as long as they output probability for each class. We will focus on classic, widely-used algorithms such as linear models, Random Forests \cite{Breiman2001}, Gradient Boosted Trees \cite{Friedman2001} and Support Vector Machines \cite{Vapnik1992}.
+
+The type of data that will be considered will be tabular data sets: feature vectors along a target, as well as textual data. This is of course generalizable to any type of data, like image classification and neural networks, but to stick with reasonable amount of data and limited training time, these kind of models will not be examined.
+
+The method will be tested on several datasets. Therefore the output will be changing and an algorithm can be good to extract explanations on a specific algorithm while being less efficient on other ones. Yet, we expect our methodology to show consistent results that should not vary too much between different datasets.
+
+\section{Outline}
+
+This thesis is structured into N chapters.
+
+[...] Compléter ça.... N = ??
+
+
+The \textit{Introduction} chapter provides the background and motivation for this project. The methodology is also stated, as well as the hypothesis for an explanation algorithm to be good enough. Finally the framework part provide information on the frame and the limitations of this thesis.
+
+The \textit{Background} chapter focuses on the algorithms published in the litterature, where the most important papers in this field of research will be examined. This chapter will also cover the background knowledge needed for the rest of the thesis. Not so many papers are related to model explanations at the prediction level. Yet they nearly all propose a different approach to this issue.
+
+The \textit{Method} chapter is dedicated to how the experiment will be performed. The datasets are specified, as well as the various models used for the tests. The technical content will be further described in this chapter. Especially, several algorithms that compute explanations on individual predictions will be provided. The metrics used to assess whether an algorithm is good or not to extract explanations is also further described here.
+
+The \textit{Experiments} part describes the experiments conducted in this thesis. This chapter provides all the results obtained according to the method of the previous chapter.
+
+Finally, the \textit{Discussions} chapter summarize the results and discuss the different methods explored here. This chapter also describe some limitations to this thesis, and provides potential improvements and what could be the future work on this topic.
+
+\chapter{Background}
+
+\chapter{Method}
+
+\chapter{Experiments}
+
+\chapter{Discussions}
+
+
+
+
+
+\section{Introduction: what is an explanation ?}
+
+These influences can be defined by several ways.
 
 \section{Contribution to the output value}
 
@@ -77,43 +158,122 @@ If for a given individual, the prediction is 80\% chances of survival, then the 
 \item but being 47 years old, the probability of survival decreased by 3\%
 \end{itemize}
 
-This kind of explanation is described on figure 1.1. Here the model attempts to predict whether passengers from the Titanic have survived or not. It is based on a random forest with 250 trees, so examining all the trees to try to understand a single prediction is totally intractable by a human being.
+This kind of explanation is described on figure 1.1. Here the model attempts to predict whether passengers from the Titanic have survived or not. It is based on a random forest with 250 trees, so examining all the trees to try to understand a single prediction is totally intractable for a human being.
 
-In average, in the dataset, a passenger has an survival probability of $0.38$. But for this example the model predicts a survival probability of $0.93$ which is $0.55$ higher than the average value. This difference of $0.55$ is then only due to the feature values of the example. With this explanation, summing all the above contributions gives us the previous difference: $-0.03 - 0.02 + 0.01 + 0.02 + 0.11 + 0.15 + 0.32 = 0.55$.
+In average, in the dataset, a passenger has an survival probability of $0.38$. But for this example the model predicts a survival probability of $0.93$ which is $0.55$ higher than the average value. This difference of $0.55$ is then due to the feature values of the example. Using this type of explanation, we can actually compute this difference, and moreover know how each feature influenced it. 
+
+On figure 1.1 (b), each step corresponds to the probability of survival given the other features. With this kind of plot, one can easily concludes that \textit{Sex} is the most influent feature, since given all the other features, it increases the probability from around 0.62 to 0.95.
 
 \begin{figure}
-    \centering
-    \def\svgwidth{\columnwidth}
-    \input{img/1-2-1.pdf_tex}
-    \caption{Classification model on the Titanic dataset, explanation for a passenger, women, travelling in the first class, with a high ticket fare.}
+	\begin{subfigure}{1.\textwidth}
+    	\centering
+    	\def\svgwidth{\columnwidth}
+    	\input{img/1-2-1.pdf_tex}
+    	\caption{Influence of each feature on the output probability}
+    \end{subfigure}
+	\begin{subfigure}{1.\textwidth}
+    	\centering
+    	\def\svgwidth{\columnwidth}
+    	\input{img/1-2-2.pdf_tex}
+    	\caption{Summing all the influences starting from the average probability}
+    \end{subfigure}
+    \caption{Classification model on the Titanic dataset, explanation for one passenger: a women, travelling in the first class, with a high ticket fare.}
 \end{figure}
 
-This way of building explanations produces very clear and understandable explanations. Indeed, it is very easy to understand that the \textit{age} feature has a negative contribution to the output probability of survival, while the \textit{Pclass} feature has a positive impact. Besides, it is easy to limit the set of important features by taking only the first $N$ relevant, and summing the rest of the influences into an additional \textit{"other features"} category.
+This way of building explanations produces very clear and understandable explanations. Indeed, it is very easy to understand that here the \textit{age} feature has a negative contribution to the output probability of survival, while the \textit{Pclass} feature has a positive impact. Besides, it is easy to limit the set of important features by taking only the first $N$ relevant, and summing the rest of the influences into an additional \textit{"other features"} category.
 
-Nevertheless, these types of explanations have a major drawback: even if for a single point it gives clear and understandable explanations, we have no idea of what happens when this point shifts a bit in the features space.
+Nevertheless, these types of explanations have one drawback: even if for a single point it gives clear and understandable explanations, we have no idea of what happens when this point shifts a bit in the features space.
 
 For instance we could be intereseted in knowing what happens when a given feature increases or deacreases. For a pricing prediction model, knowing which feature to change to increase the revenue is much more important than the actual output contribution.
 
 \section{How the output changes}
 
-\chapter{Practical methods and implementations}
+As stated before, more than the contributions of each variable, we would like to know how the classifier behaves when our point of interest shifts a bit in the feature space.
 
-Aliquam et ante.
+This would allow the user to know how to change the variables in order to change the input. For instance, managers of a production line are provided with a predictive maintenance model. But instead of knowing which parts are likely to break, they would be interested in knowing how to reduce the breaks and the maintenance costs. So the important question for them would be: which important variables should be changed to reduce the costs. Therefore, using such an explanation answering this question, they could adapt the production line  according to it by changing the variables in a way such that the model would predict less maintenance cost, or a longer lifetime.
+
+Building such explanations actually means having an idea of how the outcome changes when moving around the initial point, and therefore this means estimating the outcome around this point. As our models here produce probabilistic outputs, the outcome is here a probability distribution.
+
+These kinds of explanations should give insight about how the distribution evolve, and point out which features to change to get the expected output.
+
+\chapter{Practical methods and implementations}
 
 \section{Model-dependent explanations}
 
 \subsection{Linear models}
 
-Vestibulum dolor dolor
+By definition linear models are easy to interpret without an on-top explanation algorithm: one only has to look at the coefficients to see the relative importance of each variable.
+
+We can also easily compute the contribution to the outcome: the output depends directly of the sum of the feature value times the regression 	coefficient, plus some overall bias.
+
+\[
+	P(X) = f \left( \sum b_i x_i \right)
+\]
+
+where $(x_i)_{i \in [1, n]}$ is the current feature vector, and the values $(b_i)_{i \in [1, n]}$ are the coefficients of the linear model. The function $f$ maps the sum into the output space.
+
+So on a prediction level, multiplying each regression coefficient by the feature value give the direct influence of the feature value on the prediction.
+
+For linear regression, the function $f$ is the \textit{identity function}, therefore, each term $b_i x_i$ is both the explanation for feature $i$ and also the direct contribution to the output.
+
+For classification using logistic regression, the dependance involves a different function. Here $f$ is the sigmoid function: $f(x) = \frac1{1 + e^{-x}}$.
+
+The limit in interpretability of a linear model is the dimension of the input space: if there are hundreds of features to consider, then another step is needed. It can simply be a list of the top $N$ coefficients, $N$ being small enough. But we could also consider a feature selection algorithm that keeps a small number of features before fitting the model.
+
+The interesting thing in linear models is the ability to predict what the model will output when moving in the feature space. It only requires to look at the model coefficients: a positive coefficient means that increasing a feature increases the output, and vice-versa with negative coefficients. For interpretation purposes, this is very convenient as seen before: when users of a model can take actions to change the input variables, with this information they know which ones to change in order to maximize the output.
 
 \subsection{Tree based models}
 
-Sed lobortis neque non mauris.
+Today, many machine learning models rely on decision trees. Being either simple trees, or ensemble methods such as random forests or gradient boosted trees, they are usually not interpretable. Even simple trees has usually a large depth in order to be accurate enough, and the number of nodes and leaves can quickly reach several hundreds. The same applies for forests with hundreds of trees: observing the trees is totally intractable for a human being.
+
+This means a need for an on-top algorithm that would output explanations. An explanation method has been published by \citeauthor{treeinterpreter} in a blog post entitled \citetitle{treeinterpreter}. This methods aims at computing the contributions of each features in the output prediction.
+
+For only one decision tree, each node represents a part of the feature space
+
+
+[.... To be continued ....]
 
 \section{Model-agnostic explanations}
 
-\subsection{Lime}
-Sed laoreet tellus in massa.
+\subsection{Explanation vectors}
+
+One way to do it is to look at the gradient of the probability distribution, and try to maximize it. This has been developped in \citetitle{explvect} by \citeauthor{explvect}. In this article the author built what they call explanation vectors.
+
+The main issue here is to estimate the probability density of the classifier output. They adress it using Parzen windows: a density estimation method that interpolates several points with a sum of kernels. Practically, this means sampling in the dataset, and adding to the sum a new kernel for each new sample. At each step, the estimated distribution is the following:
+
+\[
+	P(x) = \frac{1}{n} \sum_{i=1}^n \frac1{h_n^d} K \left( \frac{x - x_i}{h_n} \right)
+\]
+
+where $K$ is a $d$-dimentional kernel function, $(x_i)_{i \in [1,n]}$ are the $n$ samples and $h_n$ is the bandwidth of the kernel, usually depending of the number of samples drawn. The most used kernel function is the Gaussian kernel. It is very convenient here as it is differentiable, and once the density is well-estimated by the window, computing the gradient from a sum of gaussian functions is very straightforward.
+
+Yet, density estimation is a costly operation [develop....]
+
+\subsection{Local estimation by a simpler model}
+
+Another solution, proposed by \citeauthor{lime} in \citetitle{lime} is to locally estimate a complicated model by a simpler one that is interpretable. We want the new model to be  be a good local estimator of the complex model, so the new model should be locally close enough to the complicated model. Given the constrainst of interpretability, using linear models is the most practical solution. But simple decision trees that are not too deep can also make good simpler models.
+
+In order to mimic the complicated model locally, \textit{LIME} algorithm --- standing for Local Interpretable Model-agnostic Explanations --- tries to locally estimate the model output distribution using a linear model.
+
+Given a complicated model seen as a black box, and a datapoint of which we want to explain the prediction, the process is the following:
+
+\begin{itemize}
+	\item Sample $N$ points according the the training set distribution
+	\item Apply the black box model to each of the sample, all the outputs will form the targets of the new training dataset.
+	\item Weight each sample using a gaussian kernel centered on the point of interest
+	\item Fit a linear model to the new dataset formed by the samples and the complicated model outputs.
+\end{itemize}
+
+\begin{figure}[!h]
+	\centering
+   	\def\svgwidth{\columnwidth}
+	\includegraphics{lime-schema.png}
+    \caption{Local estimation by a linear model around the big red cross}
+\end{figure}
+
+The gaussian kernel at step 3 is necessary in order to keep the simple model locally accurate: points that are far away are not supposed to be taken into account in the local model, while close ones should be considered as most important.
+
+Finally interpretating the simple model is the easy part: one only has to check the features associated to the biggest coefficients of the linear model, assuming the data is properly rescaled.
 
 \subsection{Partial dependancies}
 Sed laoreet tellus in massa.
@@ -121,11 +281,13 @@ Sed laoreet tellus in massa.
 \subsection{Other papers}
 Sed laoreet tellus in massa.
 
-\chapter{Experiments on datasets}
+
+\chapter{Experiments}
 Aliquam quis nibh quis justo elementum viverra.
 
-\section{Numerical datasets}
-Suspendisse id mauris a justo venenatis feugiat.
+\section{Improving a classifier score using explanations}
+
+
 
 \section{Categorical datasets}
 Suspendisse id mauris a justo venenatis feugiat.
@@ -133,7 +295,23 @@ Suspendisse id mauris a justo venenatis feugiat.
 \section{Mixed types}
 Suspendisse id mauris a justo venenatis feugiat.
 
+\nocite{lime}
+\nocite{mythos}
+\nocite{treeinterpreter}
+\nocite{explvect}
+\nocite{gametheory}
+\nocite{euregulation}
+\nocite{healthcare}
+\nocite{trust}
+\nocite{documentclassif}
+\nocite{explainingclassif}
+\nocite{ice}
+\nocite{evolutionnary}
+\nocite{interpretingusing}
+\nocite{breastcancer}
+\nocite{sensitivity}
+
+\printbibliography
+
 \end{document}
 \endinput
-%%
-%% End of file `kth-ex1.tex'.
