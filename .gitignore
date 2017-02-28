@@ -6,3 +6,8 @@
 *.bbl
 *.blg
 *.out
+*.swp
+*.swo
+*.bcf
+*.run.xml
+.ipynb_chechpoints
