@@ -11,4 +11,5 @@
 *.swo
 *.bcf
 *.run.xml
-.ipynb_chechpoints
+.ipynb_checkpoints
+code
