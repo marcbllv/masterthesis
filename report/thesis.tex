@@ -1,6 +1,7 @@
 \documentclass[a4paper,11pt]{kth-mag}
 
 \usepackage[T1]{fontenc}
+\usepackage{amsfonts}
 \usepackage{textcomp}
 \usepackage{graphicx}
 \usepackage{hyperref}
@@ -10,6 +11,10 @@
 \usepackage{nada-ex}
 \usepackage{subcaption}
 \usepackage[backend=biber]{biblatex}
+\usepackage{csquotes}
+\usepackage{tikz}
+
+\def\arraystretch{1.5}
 
 \addbibresource{ressources.bib}
 
@@ -106,7 +111,7 @@ Here, we expect the score on the second second to be quite low, because the mode
 
 \section{Framework}
 
-Most of the time explanations algorithms can work with any type of model: either regression or classification models as long as they output probability for each class. We will focus on classic, widely-used algorithms such as linear models, Random Forests \cite{Breiman2001}, Gradient Boosted Trees \cite{Friedman2001} and Support Vector Machines \cite{Vapnik1992}.
+Most of the time explanations algorithms can work with any type of model: either regression or classification models as long as they output probability for each class. We will focus on classic, widely-used algorithms such as linear models, Classification and regression trees \cite{cart}, Random Forests \cite{Breiman2001}, Gradient Boosted Trees \cite{Friedman2001} and Support Vector Machines \cite{Vapnik1992}.
 
 The type of data that will be considered will be tabular data sets: feature vectors along a target, as well as textual data. This is of course generalizable to any type of data, like image classification and neural networks, but to stick with reasonable amount of data and limited training time, these kind of models will not be examined.
 
@@ -114,10 +119,7 @@ The method will be tested on several datasets. Therefore the output will be chan
 
 \section{Outline}
 
-This thesis is structured into N chapters.
-
-[...] Compléter ça.... N = ??
-
+This thesis is divided into 5 chapters.
 
 The \textit{Introduction} chapter provides the background and motivation for this project. The methodology is also stated, as well as the hypothesis for an explanation algorithm to be good enough. Finally the framework part provide information on the frame and the limitations of this thesis.
 
@@ -131,21 +133,232 @@ Finally, the \textit{Discussions} chapter summarize the results and discuss the 
 
 \chapter{Background}
 
+As this problem is about explaining models, there are two main solutions: either the algorithm uses the inherant structure of the model to compute explanations like the tree structure for tree-based models, or it considers it as a black box and works only with the input-output matching that the model produces.
+
+The first type of algorithms will be called \textit{model-dependent} explanations algorithms, while the second type are denoted by either the term \textit{model-independant} or \textit{model-agnostic}. Both these two solution have some advantages and drawbacks, and several implementations of these two cases will be investigated.
+
+\section{Model-dependant explanations on tree-based models}
+
+This first type of explanations implies for the algorithms to understand how a model is build, making use of its particular type, and extract explanations from it. A real advantage for these methods is that explanations are usually faster to compute. Yet they are not generalizable to other types of models. Moreover a model-dependent explanation cannot be compared to another one that used another model.
+
+An explaining algorithm for tree-based models -- classification and regression trees, random forests and gradient boosted trees -- has been developed by \citeauthor{treeinterpreter} in a blogpost \cite{treeinterpreter}.
+
+
+It works as follow: initially the contribution for each feature is set to 0. When computing predictions using a tree, the data point $x$ goes down in the tree, starting from the root, following a series of rules based on the features values. At each step down, the features space is split into two disjoint parts along one axis: only one feature is involved in one cut. The algorithm then computes for this cut the difference between the proportion of $\hat{y}$ -- the model output -- in the subspace where $x$ lies and the proportion of $\hat{y}$ in the bigger space.
+
+This quantity is summed to the contribution of the feature involved in the cut. This value answers the question: at a given step, how well did the feature improve the classification of the example ?
+
+To understand it better, let's assume we have a train dataset of 2-dimentional points, a new example to classify, and that we use the following tree to classify the points into two classes:
+
+
+\begin{figure}[h!]
+\centering
+\begin{subfigure}{.55\textwidth}
+	\centering
+
+	\begin{tikzpicture}[->,>=,shorten >=1pt,auto,thick,
+    	 inner node/.style={circle,draw,inner sep=2pt},
+    	 red node/.style={circle,fill=pastelred},
+    	 green node/.style={circle,fill=pastelgreen}]
+
+	\definecolor{pastelred}{RGB}{192,80,77}
+	\definecolor{pastelgreen}{RGB}{150,182,86}
+
+  	\draw (0,0)     node[inner node,label=right:$x_1 < \theta_1$] (1) {0.59};
+	\draw (-1.5,-1.25) node[inner node,label=left:$x_2 < \theta_2$] (2) {0.38};
+	\draw (2,-1.25)  node[inner node,label=right:$x_3 < \theta_3$] (3) {0.78};
+	\draw (1.25,-2.5)    node[inner node,label=left:$x_1 < \theta_4$] (4) {0.60};
+	
+	\fill (-2.5,-3.75)   node[red node]   (5) {};
+	\fill (-1,-3.75) node[green node] (6) {};
+	\fill (0.5,-3.75)    node[red node]   (7) {};
+	\fill (2,-3.75)  node[green node] (8) {};
+	\fill (3.5,-3.75)    node[red node]   (9) {};
+  	
+  	\path[every node/.style={font=\sffamily\small}]
+    (1) edge      (2) 
+        edge[line width=2pt] (3)
+    (2) edge      (5)
+        edge      (6)
+    (3) edge[line width=2pt] (4)
+        edge      (9)
+    (4) edge[line width=2pt] (7)
+        edge      (8);
+        
+	\end{tikzpicture}
+  
+  \caption{A subfigure}
+  \label{fig:sub1}
+\end{subfigure}%
+\begin{subfigure}{0.45\textwidth}
+  \centering
+  \includegraphics[width=1.0\linewidth]{img/decisiontree.png}
+  \caption{A subfigure}
+  \label{fig:sub2}
+\end{subfigure}
+\caption{A figure with two subfigures}
+\label{fig:test}
+\end{figure}
+
+The green and red dots represent the training set. On each inner node of the tree, a test is performed (Is $x_i$ smaller than $\theta_j$ ?) to drive the point either on the left or the right sub-branch. The numbers in the circles indicate the proportion of red dots in each subspace that a node represents. This proportion in the leafs is either 0 or 100\% -- the leaf represents either a green subspace or a red subspace here.
+
+The grey dot is the new example to classify. It will of course be classified as red by the classification tree, going through the bold path to the red leaf. 
+Between the root and the second node encountered by the example while being classified, the feature $x_1$ is used, and the classification improves since the proportion of red points goes from 0.59 to 0.78. Hence, the contribution of feature $x_1$ is positive at this step and is increased by $0.78 - 0.59 = 0.19$.
+
+Then feature $x_2$ is used, and this step reduces the proportion of red dots by $0.18$. Finally, feature $x_1$ is used again, increasing the probability from 0.60 to 1. 
+
+Summing all the contributions along the path, the explanation for this classification are the following contributions towards class \textit{Red}:
+
+\begin{center}
+\begin{tabular}{|c|c|}
+\hline
+Feature $x_1$ & 0.59 \\
+\hline
+Feature $x_2$ & -0.18 \\
+\hline
+\end{tabular}
+\end{center}
+
+This solution is easily adaptable to ensemble methods using trees as their base model: contributions to each feature can be summed over all the trees, and average according to the importance of each tree in the classifier.
+
+In the case of Random Forests, where all the trees are given the same weight, contribution for feature $i$ is computed as follow:
+\[
+	\mathrm{contrib}_i(x) = \sum_{tree t} \mathrm{contrib}_{t,i} (x)
+\]
+
+This way of exploring trees through the path of the original datapoint makes this algorithm efficient: its complexity is proportional to the height of the tree, and linear in the number of trees if the algorithm is an ensemble.
+
+\section{Model-independent explanations}
+
+Although model-dependent methods are computationally efficient, they still rely on specific models. A model-independent or model-agnostic algorithm would be preferable for at least two reasons: its ability to explain any type of classifiers and regressors, and the possibility to compare two explanations from two different model, even when these models are of different types.
+
+Several algorithms has been developed, most notably: \cite{lime}, \cite{explvect}, \cite{explainingclassif}, \cite{evolutionnary}, \cite{gametheory}, \cite{ice}, \cite{sensitivity}. They nearly all develop a different approach to extract explanations from a specific prediction, albeit some similarities exist between some of them.
+
+For some authors, the way to understand a prediction is to locally estimate the output of the model. That is, understand how the model behave around the data point of interest in the features space.
+
+Thus, several solutions involve estimating the local output distribution from the model, like \textit{Lime} \cite{lime} and \citeauthor{explvect}'s \textit{explanation vectors} \cite{explvect}. If the model is a classifier that outputs probabilities, then the output distribution is a probability distribution in the feature space. 
+
+\subsection{Local estimation by a simpler model}
+
+\textit{Lime} algorithm, standing for \textit{Locally Interpretable Model-agnostic Explanations}, proposed by \citeauthor{lime} \cite{lime} locally estimate a complicated model output by a simpler one that is interpretable. The goal is then to find the new model that is a good local estimator of the complex model, so the new model should be locally close enough to the original model. 
+
+Given the constrainst of interpretability, linear models are the first obvous choice to use as simple models. When a limited number of features is used, then such models become easily interpretable by humans. Yet simple decision trees that are not too deep can also make good interpretable models.
+
+To locally approximate a model seen as a black box by a linear model, Lime's process is the following:
+
+\begin{itemize}
+	\item Sample $N$ points according the the training set distribution
+	\item Apply the black box model to each of the sample, all the outputs will form the targets of the new training dataset.
+	\item Weight each sample using a gaussian kernel centered on the point of interest
+	\item Fit a linear model to the new dataset formed by the samples and the complicated model outputs.
+\end{itemize}
+
+\begin{figure}[!h]
+	\centering
+   	\def\svgwidth{\columnwidth}
+	\includegraphics{lime-schema.png}
+    \caption{Local estimation by a linear model around the big red cross}
+\end{figure}
+
+In the author's implementation \cite{limeGitHub}, the sampling is made after discretizing the training set: each feature is splitted in several parts using a binning method (quantiles, histograms, supervized binning). Then each new sample is generated feature by feature following this binning. This may not be the most accurate way to mimic the training distribution but it is quite fast. Furthermore, the goal is to generate points in space, and the fact that some of them are distant from the initial point is not a problem since the gaussian kernel weighting (at step 3) will keep the linear model locally accurate: points that are far away will not be taken into account in the local model, while closer ones will be considered as most important.
+
+Finally, the interpretation of the simple model is the easy part: it only requires to check the features associated to the biggest coefficients of the linear model. These biggest coefficient actually represent the locally most effective features that had the most importance on the prediction since variations on these features whould have led to the larger changes on the model output.
+
+\subsection{Gradient of the model output distribution}
+
+\citeauthor{explvect}'s \textit{explanation vectors} algorithm \cite{explvect} have a comparable approach to Lime's, in the sense that they both try to mimic the local distribution.
+
+The model output is here estimated using a non parametric estimator around the point of interest. Then the gradient of this estimator at the inital point is computed. The largest absolute values of the gradient components are the most locally influential variables on the prediction, for the same reason as in Lime algorithm: along these features, local small variations would mean large variations of the model output.
+
+The main issue here is to estimate the probability density of the classifier output. They adress it using the Parzen-Rosenblatt window method \cite{parzen} \cite{rosenblatt}: a density estimation method that interpolates several points with a sum of kernels. Practically, this means sampling in the dataset, and adding to the sum a new kernel for each new sample. At each step, the estimated distribution is the following:
+
+\[
+	P(x) = \frac{1}{n} \sum_{i=1}^n \frac1{h_n^d} K \left( \frac{x - x_i}{h_n} \right)
+\]
+
+where $K$ is a $d$-dimentional kernel function, $(x_i)_{i \in [1,n]}$ are the $n$ samples and $h_n$ is the bandwidth of the kernel, usually depending of the number of samples drawn. The most widely used kernel function is the Gaussian kernel. It is convenient here, being differentiable, and once the density is well-estimated by the window, computing the gradient from a sum of gaussian functions is very straightforward.
+
+\subsection{Explanations through visualization}
+
+Visualizing is key to understand how datasets are structured, especially with the large amount of new data that appears everyday. This is why easily understandable explanations should be mixed with visualization tools.
+
+Nevertheless, as opposed to the previouly mentionned algorithms, another class of explanations uses visualization as the central part of the process. It regroups methods like Partial Dependence Plots (see \cite{elementsofstats}), and Individual Conditional Expectation \cite{ice}.
+
+This second method is somewhat similar to partial dependence plots. The authors develop a similar visualization tool called Individual Conditional Expectation plots. The principle is based on the same idea as partial dependence plot, that is, computing the following function, given an estimator $f$, a point in the features space $\mathbf{x} = (x_1, ..., x_n)$ and a feature $i$:
+
+\[
+	f_i : x_i \mapsto \mathbb{E}_{x_i} (f(\mathbf{x}_{(\neq i)}, x_i)) = \int f(\mathbf{x}_{(\neq i)}, x_i) \mathrm{dP}(\mathbf{x}_{(\neq i)})
+\]
+
+where $\mathbf{x}_{\neq i} = (x_1, ..., x_{i-1}, x_{i+1}, ..., x_n)$
+
+Usually the expectation above is computed through the following sum:
+
+\[
+	f_i(x_i) = \sum_{i=1}^{N} f(x_i, \mathbf{x}_{(\neq i),k})
+\]
+
+where $\mathbf{x}_{(\neq i),k}, k \in [1, n]$ represents all the values taken by the features differents from $i$ in the training dataset.
+
+Nonetheless, the idea behind ICE plots is that averaging in such a way reduces the information provided by the plot, and that it sometimes doesn't help the user understand the data.
+
+Therefore, instead of computing the expectation value over all the examples, ICE's authors decide to keep one curve for each instance.Then for each feature $i$ and example $k$, a curve is drawn with the following shape:
+
+\[
+	f_{i,k}(x) = f(x_1, ..., x_{i-1}, x, x_{i+1}, ..., x_n)
+\]
+
+This lets the user having far more insights on the model behaviour on individual instances, without being longer to compute than a partial dependence plot. The authors also proposes to "pinch" all these plots on one location $x^*$ in the range of $x_i$, thus ploting the centered ICE plots, the \textit{c-ICE}:
+
+\[
+	f^\mathrm{cent}_{i,k}(x) = f_{i,k}(x) - f(\mathbf{x}_{(\neq i),k}, x^*)
+\]
+
+as well as drawing the derivative of all these plots to understand better where important interaction happen for this feature.
+
+\subsection{Explanations using Game Theory}
+
+A final interesting approach relies on game theory and the \textit{Shapley value} to compute explanations \cite{gametheory}.
+
+The Shapley value was first introduced by Lloyd Shapley in 1953 \cite{shapleyvalue}. It can be described as an "a priori evaluation of the prospects of a player in a multi-person game" \cite{hart1989shapley}. The Shapley value represents therefore the influence of a player regarding potential coalitions formed with other players. For instance in the Council of the European Union, each country has a number of votes proportional to its population: bigger countries have a more votes and can make stronger coalitions, while smaller ones have less. The Shapley value in this EU Council reflects this power: Germany and France have a larger Shapley Value, while less populated countries have a small Shapley Value. 
+
+In this article \cite{gametheory}, the "players" in the game are the input variables of the model. They "compete" in a certain way to influence the model output. Therefore, the features that had the most importance in a specific prediction should get a larger Shapley value.
+
+The real challenge is to compute the Shapley Value, which is hard in practise, due to an exponential computationnal time. The authors show that the Shapley value of feature $i$ can be written in the following way:
+
+\[
+	\varphi_i = \frac1{n! \, . \, | \mathcal{A} |} \sum_{\mathcal{O} \in \pi(N)} \sum_{y \in \mathcal{A}} \left( f( \mathrm{Pre}^i(\mathcal{O}) \cup \{i\}, y) - f(\mathrm{Pre}^i(\mathcal{O}), y) \right)
+\]
+
+where $\pi(N)$ is the set of permutations of all the features, $\mathcal{A}$ is the feature space. $\mathrm{Pre}^i$ represent here all the features before feature $i$ in the perumtation $\mathcal{O}$. This sum can be approximized by sampling datapoints in $\mathcal{A}$ and premutations $\mathcal{O}$ of the features.
+
+Yet, with a large number of features, the number of samples required to estimate the Shapley value increases a lot. Consequently convergence time become too important for most use cases.
+
+\subsection{Explanations on textual data}
+
+Textual data is quite different from classical data like churn prediction, or fraud detection datasets: the data is less structured, and variables are usually words or group of words which lead to a very high dimentionality for large corpuses. Other explanation methods may not work as efficiently here.
+
+Two articles focus on explaining classification of text documents: \citetitle{documentclassif} \cite{documentclassif}, and also part of the Lime article \cite{lime}.
+
+The first one (\cite{documentclassif}) intend to find the \textit{minimal explanation} in a document classification. This minimal explanation is the smallest set of words in a document that changes the classification result of this document. That is: a set $S = \{w_1, ..., w_k\}$ where removing all the words $w_1, ..., w_k$ from the document changes the classification, while removing only part of this set does not.
+
+The classification explanation is then the previous set of words. Yet finding large sets of words in documents leads to a large complexity (exponential complexity). The authors therefore propose an heuristics to find these sets: first find words that changes the most the output probability, then combine these strong words together in order to find the minimal explanation. The complexity for this second solution keeps polynomial.
+
+\vspace{\baselineskip}
+
+Lime \cite{lime} also features a specific part on explaining text classification.
+
+The solution uses Lime algorithm -- described above -- adapted to this kind of data. Here instead of sampling data in a classical features space, new documents are sampled by randomly removing words from the original document. Distances between the new texts and the initial document are measured using cosine distance.
+
+Then, Lime is applied: the samples are weighted using a distance kernel centered in the original document, and a linear model is fitted. This method is quite efficient and not too expensive, as the complexity is linear in the number of samples chosen.
+
 \chapter{Method}
-
-\chapter{Experiments}
-
-\chapter{Discussions}
-
-
-
-
 
 \section{Introduction: what is an explanation ?}
 
 These influences can be defined by several ways.
 
-\section{Contribution to the output value}
+\subsection{Contribution to the output value}
 
 First, we can define the influence of the features as their contribution to the prediction. A good and understandable method would be to do so that summing all the influences gives the predictions. That would mean splitting the prediction into several part, and associating the influential features to the biggest parts and the less influential to the smallest.
 
@@ -186,7 +399,7 @@ Nevertheless, these types of explanations have one drawback: even if for a singl
 
 For instance we could be intereseted in knowing what happens when a given feature increases or deacreases. For a pricing prediction model, knowing which feature to change to increase the revenue is much more important than the actual output contribution.
 
-\section{How the output changes}
+\subsection{How the output changes}
 
 As stated before, more than the contributions of each variable, we would like to know how the classifier behaves when our point of interest shifts a bit in the feature space.
 
@@ -195,6 +408,16 @@ This would allow the user to know how to change the variables in order to change
 Building such explanations actually means having an idea of how the outcome changes when moving around the initial point, and therefore this means estimating the outcome around this point. As our models here produce probabilistic outputs, the outcome is here a probability distribution.
 
 These kinds of explanations should give insight about how the distribution evolve, and point out which features to change to get the expected output.
+
+\chapter{Experiments}
+
+\chapter{Discussions}
+
+
+
+
+\chapter{Stuff}
+
 
 \chapter{Practical methods and implementations}
 
@@ -249,31 +472,25 @@ where $K$ is a $d$-dimentional kernel function, $(x_i)_{i \in [1,n]}$ are the $n
 
 Yet, density estimation is a costly operation [develop....]
 
+\subsection{Other...}
+
+Other articles focus on changing the value of a given attribute in the input vector and measure how the model behave when this attribute is modified. This is how explanations are computed in \citetitle{explainingclassif} \cite{explainingclassif}: for each attribute $A_i$ they compute a probability difference:
+
+\[
+	\mathrm{predDiff}_i(x) = f(x) - f(x \setminus A_i)
+\]
+
+as well as the information difference:
+
+\[
+	\mathrm{infDiff}_i(x) = log p(y | x) - log p(y | x \setminus A_i)
+\] 
+
+But this 
+
 \subsection{Local estimation by a simpler model}
 
-Another solution, proposed by \citeauthor{lime} in \citetitle{lime} is to locally estimate a complicated model by a simpler one that is interpretable. We want the new model to be  be a good local estimator of the complex model, so the new model should be locally close enough to the complicated model. Given the constrainst of interpretability, using linear models is the most practical solution. But simple decision trees that are not too deep can also make good simpler models.
-
-In order to mimic the complicated model locally, \textit{LIME} algorithm --- standing for Local Interpretable Model-agnostic Explanations --- tries to locally estimate the model output distribution using a linear model.
-
-Given a complicated model seen as a black box, and a datapoint of which we want to explain the prediction, the process is the following:
-
-\begin{itemize}
-	\item Sample $N$ points according the the training set distribution
-	\item Apply the black box model to each of the sample, all the outputs will form the targets of the new training dataset.
-	\item Weight each sample using a gaussian kernel centered on the point of interest
-	\item Fit a linear model to the new dataset formed by the samples and the complicated model outputs.
-\end{itemize}
-
-\begin{figure}[!h]
-	\centering
-   	\def\svgwidth{\columnwidth}
-	\includegraphics{lime-schema.png}
-    \caption{Local estimation by a linear model around the big red cross}
-\end{figure}
-
-The gaussian kernel at step 3 is necessary in order to keep the simple model locally accurate: points that are far away are not supposed to be taken into account in the local model, while close ones should be considered as most important.
-
-Finally interpretating the simple model is the easy part: one only has to check the features associated to the biggest coefficients of the linear model, assuming the data is properly rescaled.
+Another solution, 
 
 \subsection{Partial dependancies}
 Sed laoreet tellus in massa.
@@ -295,19 +512,12 @@ Suspendisse id mauris a justo venenatis feugiat.
 \section{Mixed types}
 Suspendisse id mauris a justo venenatis feugiat.
 
-\nocite{lime}
 \nocite{mythos}
-\nocite{treeinterpreter}
-\nocite{explvect}
-\nocite{gametheory}
 \nocite{euregulation}
 \nocite{healthcare}
 \nocite{trust}
-\nocite{documentclassif}
 \nocite{explainingclassif}
-\nocite{ice}
 \nocite{evolutionnary}
-\nocite{interpretingusing}
 \nocite{breastcancer}
 \nocite{sensitivity}
 
