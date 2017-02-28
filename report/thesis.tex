@@ -354,13 +354,17 @@ Then, Lime is applied: the samples are weighted using a distance kernel centered
 
 \chapter{Method}
 
-\section{Introduction: what is an explanation ?}
+The purpuse of this thesis is to test which algorithms provide the most meaningful explanations, and which explanations are the most significant in order to get insights on a classifier and to improve it.
 
-These influences can be defined by several ways.
+This chapter first provide some information on explanations and present the main difference between two kind of explanations. Then the method for measuring the score and ranking the algorithms is provided.
+
+\section{What an explanation means in practise}
+
+An explanation is a set of features that are given a weight, but what this set means can be seen in two ways. Each has its advantages and its application purposes, and they do not necessarily lead to the same results.
 
 \subsection{Contribution to the output value}
 
-First, we can define the influence of the features as their contribution to the prediction. A good and understandable method would be to do so that summing all the influences gives the predictions. That would mean splitting the prediction into several part, and associating the influential features to the biggest parts and the less influential to the smallest.
+First, the influence of the features can be defined as their contribution to the prediction, such that summing all the influences gives back the actual prediction. Here by prediction, we mean \textit{probability} for classification or \textit{raw value} that the model predict for regression. This methods involves splitting the prediction into several part, then associating to the influential features the biggest parts and to the less influential the smallest.
 
 For instance, let us consider a binary classification model for the Titanic dataset, that assess the probability between 0 and 1 that the person survives.
 If for a given individual, the prediction is 80\% chances of survival, then the explanation could tell us that:
@@ -373,11 +377,9 @@ If for a given individual, the prediction is 80\% chances of survival, then the 
 
 This kind of explanation is described on figure 1.1. Here the model attempts to predict whether passengers from the Titanic have survived or not. It is based on a random forest with 250 trees, so examining all the trees to try to understand a single prediction is totally intractable for a human being.
 
-In average, in the dataset, a passenger has an survival probability of $0.38$. But for this example the model predicts a survival probability of $0.93$ which is $0.55$ higher than the average value. This difference of $0.55$ is then due to the feature values of the example. Using this type of explanation, we can actually compute this difference, and moreover know how each feature influenced it. 
+In average, in the dataset, a passenger has an probability of survival equal to $0.38$. But for this example the model predicts survival with probability $0.93$ which is $0.55$ higher than the average value. This difference of $0.55$ is then due to the feature values of this particular example. Using this type of explanation, we can actually compute this difference, and moreover know how each feature influenced it. 
 
-On figure 1.1 (b), each step corresponds to the probability of survival given the other features. With this kind of plot, one can easily concludes that \textit{Sex} is the most influent feature, since given all the other features, it increases the probability from around 0.62 to 0.95.
-
-\begin{figure}
+\begin{figure}[h!]
 	\begin{subfigure}{1.\textwidth}
     	\centering
     	\def\svgwidth{\columnwidth}
@@ -393,7 +395,9 @@ On figure 1.1 (b), each step corresponds to the probability of survival given th
     \caption{Classification model on the Titanic dataset, explanation for one passenger: a women, travelling in the first class, with a high ticket fare.}
 \end{figure}
 
-This way of building explanations produces very clear and understandable explanations. Indeed, it is very easy to understand that here the \textit{age} feature has a negative contribution to the output probability of survival, while the \textit{Pclass} feature has a positive impact. Besides, it is easy to limit the set of important features by taking only the first $N$ relevant, and summing the rest of the influences into an additional \textit{"other features"} category.
+Figure 1.1 provides the influences for each feature. Chart (a) is the raw influence in terms of probability. On figure (b), each step corresponds to the increase produced by each feature value. With this kind of plot, one can easily concludes that \textit{Sex} is the most influent feature, since given all the other features, it increases the probability from around 0.62 to 0.95.
+
+This way of building explanations produces very clear and understandable explanations. Indeed, it is easy to understand that here the \textit{age} feature has a negative contribution to the output probability of survival -- people in their fourties rather died than were saved, while the \textit{Pclass} feature has a positive impact -- only a few first class passengers died. Besides, it is easy to limit the set of important features by taking only the first $N$ relevant, and summing the rest of the influences into an additional \textit{"other features"} category.
 
 Nevertheless, these types of explanations have one drawback: even if for a single point it gives clear and understandable explanations, we have no idea of what happens when this point shifts a bit in the features space.
 
@@ -408,6 +412,28 @@ This would allow the user to know how to change the variables in order to change
 Building such explanations actually means having an idea of how the outcome changes when moving around the initial point, and therefore this means estimating the outcome around this point. As our models here produce probabilistic outputs, the outcome is here a probability distribution.
 
 These kinds of explanations should give insight about how the distribution evolve, and point out which features to change to get the expected output.
+
+
+\section{how to test ?}
+
+\begin{itemize}
+	\item train a classifier, get explanations, remove most important variables and observe the score decreasing.
+    \item better probably: create a bad classifier, print explanations, remove wrong data, retrain and see if score increases -- On 20 news groups
+\end{itemize}
+
+\section{Algorithms tested}
+
+Test it for Lime, treeinterpreter, linear models, Game theory (?), Parzen (?). For Lime: test with various discretization methods.
+
+\section{Datasets}
+
+[-------- In Experiments ?? ----------]
+\begin{itemize}
+    \item 20 newsgroup
+    \item kaggle Ames housing market
+    \item Boston Housing
+    \item German credits
+\end{itemize}
 
 \chapter{Experiments}
 

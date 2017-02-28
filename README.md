@@ -26,5 +26,3 @@ For Lime: test with various discretization methods.
 - Boston Housing
 - German credits
 
-Comparison between treeinterpreter & lime ?
-
