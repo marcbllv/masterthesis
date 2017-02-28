@@ -2,6 +2,7 @@
 *.log
 *.synctex.gz
 *.pdf
+*.dvi
 *.toc
 *.bbl
 *.blg
