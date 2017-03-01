@@ -200,9 +200,9 @@ To understand it better, let's assume we have a train dataset of 2-dimentional p
 \label{fig:test}
 \end{figure}
 
-The green and red dots represent the training set. On each inner node of the tree, a test is performed (Is $x_i$ smaller than $\theta_j$ ?) to drive the point either on the left or the right sub-branch. The numbers in the circles indicate the proportion of red dots in each subspace that a node represents. This proportion in the leafs is either 0 or 100\% -- the leaf represents either a green subspace or a red subspace here.
+The green and red dots represent the training set, and the grey dot a new example to classify. At each node of the tree, a test is performed (Is $x_i$ smaller than $\theta_j$ ?) in order to drive the grey point either on the left or the right branch. The numbers on the nodes indicate the proportion of red dots in each subspace represented by this node. On the leafs, this proportion is either 0 or 100\% -- the leaf represents either a green subspace or a red subspace here.
 
-The grey dot is the new example to classify. It will of course be classified as red by the classification tree, going through the bold path to the red leaf. 
+The grey dot is the new example to classify. It will, of course, be classified as red by the classification tree, going through the bold path to the red leaf. 
 Between the root and the second node encountered by the example while being classified, the feature $x_1$ is used, and the classification improves since the proportion of red points goes from 0.59 to 0.78. Hence, the contribution of feature $x_1$ is positive at this step and is increased by $0.78 - 0.59 = 0.19$.
 
 Then feature $x_2$ is used, and this step reduces the proportion of red dots by $0.18$. Finally, feature $x_1$ is used again, increasing the probability from 0.60 to 1. 
@@ -414,16 +414,43 @@ Building such explanations actually means having an idea of how the outcome chan
 These kinds of explanations should give insight about how the distribution evolve, and point out which features to change to get the expected output.
 
 
-\section{how to test ?}
+\section{Performance measure}
 
-\begin{itemize}
-	\item train a classifier, get explanations, remove most important variables and observe the score decreasing.
-    \item better probably: create a bad classifier, print explanations, remove wrong data, retrain and see if score increases -- On 20 news groups
-\end{itemize}
+In this problem of finding explanations of individual predictions, the output cannot be evaluated as simply as an accuracy score. The output is here a list of variables along with a weighting score, and it is therefore much more qualitative than quantitative. Moreover an explanation algorithm can be helpful on a given dataset and not on another, but performance can also vary from an individual example to another one.
+
+Hence the measure of the performance of an algorithm will not be based directly on the algorithm output, but rather on its ability to help humans in understand and improve a model.
+
+The performance test for an algorithm will be the following: first a bad model will be trained on a given dataset. A \textit{bad model} is a model based on features that the user know not to be reliable. Then explanations are computed for several examples in the test dataset. A user is then asked to remove the features that does not seem trustworthy.
+
+To test the algorithm quantitatively, two datasets are needed apart from the training set: one test dataset in the same format as the train set, that is, not cleaned from the untrustworthy features, and a validation dataset that contains only the clean data.
+
+That way, the baseline score of the model is the score on the validation set: this is the score the model would obtain when applied on external data, it shows the ability for the model to generalize or not on new data. Meanwhile, the score on the unclean test set does not reflect the real performance of the model: this score should be probably higher than the one on the clean validation set. The higher the difference between these two score, the less trustworthy and generalizable the model is.
+
+When the untrustworthy features are identified by the user, these features are removed from the original set -- the train and test datasets. Then a new model is retrained and scored, both on the test set and on the clean validation set. The score on the test set may decrease, but it should get closer to the score on the validation set. Indeed, the algorithm is now supposed to be based on more trustworthy features, and the score on the test set should reflect more precisely the ability of the model to generalize on new data.
+
+\section{Machine learning models}
+
+The purpose of this thesis is to find and test several algorithms that would have practical use at Dataiku and in the industry in general. This is why popular models will be tested: models that are widely used in production in many datascience projects.
+
+Therefore four models will be tested, two linear models: \textit{linear regression} and \textit{logistic regression}, and two tree-based models: \textit{Random Forests} \cite{Breiman2001} and \textit{Gradient Boosting} \cite{Friedman2001}. Nonetheless, regarding model-independant explanations, any type of predictive model could be used, as long as it outputs either classification probability, or a regression prediction, like neural networks for instance.
 
 \section{Algorithms tested}
 
-Test it for Lime, treeinterpreter, linear models, Game theory (?), Parzen (?). For Lime: test with various discretization methods.
+As seen on Chapter 3 -- Background, this field of research led to many different algorithms that intend to explain machine learning models. In this thesis, a selection of algorithms will be tested, with several variants.
+
+\subsection{Model-dependant}
+
+As we will use either linear or tree-based models here, two kinds of model-dependant explanations will be used.
+
+For linear models, the simple explanation algorithm relying on the linear coefficients and the features value, presented in Chapter 3, will be applied. This solution works in a similar way for regression and classification, so it will not need any adjustments for linear regression or logistic regression.
+
+When testing tree-based models, Tree Interpreter \cite{treeinterpreter}, implemente by the article author on github will be used for Random Forests. An adaptation for gradient boosting made by the author of this thesis will also be used.
+
+\subsection{Model-independent}
+
+Among the large choice of model-independent explanations algorithms, two of them will be tested: \textit{Lime} \cite{lime}, and the Parzen-window-based \textit{explanation vectors} \cite{explvect}.
+
+These algorithms are the most recent and above all: the fastest regarding computation time. Computing explanations for an individual example should be something fast enough: a user does certainly not want to wait 2 minutes to get an insight about an \textit{single} prediction, a few seconds is a maximum. Moreover, a high computation time makes it much harder to compute explanations for a large number of examples.
 
 \section{Datasets}
 
@@ -445,7 +472,7 @@ Test it for Lime, treeinterpreter, linear models, Game theory (?), Parzen (?). F
 \chapter{Stuff}
 
 
-\chapter{Practical methods and implementations}
+\section{Practical methods and implementations}
 
 \section{Model-dependent explanations}
 
@@ -471,72 +498,6 @@ The limit in interpretability of a linear model is the dimension of the input sp
 
 The interesting thing in linear models is the ability to predict what the model will output when moving in the feature space. It only requires to look at the model coefficients: a positive coefficient means that increasing a feature increases the output, and vice-versa with negative coefficients. For interpretation purposes, this is very convenient as seen before: when users of a model can take actions to change the input variables, with this information they know which ones to change in order to maximize the output.
 
-\subsection{Tree based models}
-
-Today, many machine learning models rely on decision trees. Being either simple trees, or ensemble methods such as random forests or gradient boosted trees, they are usually not interpretable. Even simple trees has usually a large depth in order to be accurate enough, and the number of nodes and leaves can quickly reach several hundreds. The same applies for forests with hundreds of trees: observing the trees is totally intractable for a human being.
-
-This means a need for an on-top algorithm that would output explanations. An explanation method has been published by \citeauthor{treeinterpreter} in a blog post entitled \citetitle{treeinterpreter}. This methods aims at computing the contributions of each features in the output prediction.
-
-For only one decision tree, each node represents a part of the feature space
-
-
-[.... To be continued ....]
-
-\section{Model-agnostic explanations}
-
-\subsection{Explanation vectors}
-
-One way to do it is to look at the gradient of the probability distribution, and try to maximize it. This has been developped in \citetitle{explvect} by \citeauthor{explvect}. In this article the author built what they call explanation vectors.
-
-The main issue here is to estimate the probability density of the classifier output. They adress it using Parzen windows: a density estimation method that interpolates several points with a sum of kernels. Practically, this means sampling in the dataset, and adding to the sum a new kernel for each new sample. At each step, the estimated distribution is the following:
-
-\[
-	P(x) = \frac{1}{n} \sum_{i=1}^n \frac1{h_n^d} K \left( \frac{x - x_i}{h_n} \right)
-\]
-
-where $K$ is a $d$-dimentional kernel function, $(x_i)_{i \in [1,n]}$ are the $n$ samples and $h_n$ is the bandwidth of the kernel, usually depending of the number of samples drawn. The most used kernel function is the Gaussian kernel. It is very convenient here as it is differentiable, and once the density is well-estimated by the window, computing the gradient from a sum of gaussian functions is very straightforward.
-
-Yet, density estimation is a costly operation [develop....]
-
-\subsection{Other...}
-
-Other articles focus on changing the value of a given attribute in the input vector and measure how the model behave when this attribute is modified. This is how explanations are computed in \citetitle{explainingclassif} \cite{explainingclassif}: for each attribute $A_i$ they compute a probability difference:
-
-\[
-	\mathrm{predDiff}_i(x) = f(x) - f(x \setminus A_i)
-\]
-
-as well as the information difference:
-
-\[
-	\mathrm{infDiff}_i(x) = log p(y | x) - log p(y | x \setminus A_i)
-\] 
-
-But this 
-
-\subsection{Local estimation by a simpler model}
-
-Another solution, 
-
-\subsection{Partial dependancies}
-Sed laoreet tellus in massa.
-
-\subsection{Other papers}
-Sed laoreet tellus in massa.
-
-
-\chapter{Experiments}
-Aliquam quis nibh quis justo elementum viverra.
-
-\section{Improving a classifier score using explanations}
-
-
-
-\section{Categorical datasets}
-Suspendisse id mauris a justo venenatis feugiat.
-
-\section{Mixed types}
-Suspendisse id mauris a justo venenatis feugiat.
 
 \nocite{mythos}
 \nocite{euregulation}
