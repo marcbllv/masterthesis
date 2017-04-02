@@ -1,4 +1,4 @@
-SRC  = $(wildcard *.svg)
+SRC  = $(wildcard /Users/marcbeillevaire/Documents/kth/masterthesis/report/img/*.svg)
 TRGT = $(SRC:.svg=.pdf)
 
 all: $(TRGT)

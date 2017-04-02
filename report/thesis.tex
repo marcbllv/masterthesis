@@ -410,19 +410,11 @@ This kind of explanation is described on figure 1.1. Here the model attempts to 
 In average, in the dataset, a passenger has an probability of survival equal to $0.38$. But for this example the model predicts survival with probability $0.93$ which is $0.55$ higher than the average value. This difference of $0.55$ is then due to the feature values of this particular example. Using this type of explanation, we can actually compute this difference, and moreover know how each feature influenced it. 
 
 \begin{figure}[h!]
-	\begin{subfigure}{1.\textwidth}
-    	\centering
-    	\def\svgwidth{\columnwidth}
-    	\input{img/1-2-1.pdf_tex}
-    	\caption{Influence of each feature on the output probability}
-    \end{subfigure}
-	\begin{subfigure}{1.\textwidth}
-    	\centering
+		\centering
     	\def\svgwidth{\columnwidth}
     	\input{img/1-2-2.pdf_tex}
     	\caption{Summing all the influences starting from the average probability}
-    \end{subfigure}
-    \caption{Classification model on the Titanic dataset, explanation for one passenger: a women, travelling in the first class, with a high ticket fare.}
+    \caption{Classification model on the Titanic dataset, explanation for one passenger: a women, travelling in the first class, with a high ticket fare. This type of explanation enables summing all the feature influences, starting from the average probability to reach the classifier's prediction.}
 \end{figure}
 
 Figure 1.1 provides the influences for each feature. Chart (a) is the raw influence in terms of probability. On figure (b), each step corresponds to the increase produced by each feature value. With this kind of plot, one can easily concludes that \textit{Sex} is the most influent feature, since given all the other features, it increases the probability from around 0.62 to 0.95.
@@ -497,23 +489,11 @@ Finally for classical classification, the German Credit dataset from UCI will be
 
 \chapter{Experiments}
 
-\section{Regression}
+\section{Titanic dataset}
 
-\subsection{Linear model}
+The firsts experiments will be performed on the well-known Titanic dataset. This dataset consists on the list of the Titanic passengers with several information provided on them. The train set contains the information about the person having died in the tragedy or not, and the goal of the model is to predict the chances of survival for people on the test dataset.
 
-\begin{itemize}
-	\item Test simple linear analysis
-	\item Test Parzen
-	\item Test Lime
-\end{itemize}
-
-\subsection{Tree-based regressor}
-
-\begin{itemize}
-	\item Test tree interpreter
-	\item Test Parzen
-	\item Test Lime
-\end{itemize}
+Here we will be using a subset of the features: the passenger's age, sex and class, in which port he or she embarked, the ticket fare, and the number of parents or children spouses or siblings aboard. This makes a total of seven features. The model will be a random forest classifier with 250 trees. Understanding the how and whys of its predictions cannot be done manually, so several algorithms will be tested
 
 \section{20 news group}
 
@@ -546,7 +526,7 @@ The ROC curves that are obtained when scoring the model on the test dataset and 
     	\caption{Roc curve on the noisy test dataset (\textit{blue}, Area under curve: 0.986) and on the clean validation set (\textit{green}, AUC: 0.880)}
 \end{figure}
 
-As expected, there is a large difference between the score on the test set, that features the headers and previous messages quotations, and the validation set, cleaned from these noisy parts.
+As expected, there is a large difference between the score on the test set, that features the headers and previous messages quotations, and the validation set, cleaned from these noisy parts. These ROC curves mean that the model generalize badly on a clean dataset that is quite different from the training set.
 
 Below are the results for the three kinds of explanations algorithms tested. The user is showed 20 examples from the dataset. These examples are the same in the three methods.
 
