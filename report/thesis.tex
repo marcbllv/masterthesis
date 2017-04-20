@@ -493,7 +493,26 @@ Finally for classical classification, the German Credit dataset from UCI will be
 
 The firsts experiments will be performed on the well-known Titanic dataset. This dataset consists on the list of the Titanic passengers with several information provided on them. The train set contains the information about the person having died in the tragedy or not, and the goal of the model is to predict the chances of survival for people on the test dataset.
 
-Here we will be using a subset of the features: the passenger's age, sex and class, in which port he or she embarked, the ticket fare, and the number of parents or children spouses or siblings aboard. This makes a total of seven features. The model will be a random forest classifier with 250 trees. Understanding the how and whys of its predictions cannot be done manually, so several algorithms will be tested
+Here we will be using a subset of the features: the passenger's age, sex and class, in which port he or she embarked, the ticket fare, and the number of parents or children spouses or siblings aboard, which makes a total of seven features.
+
+This first experiment comparison between several explanation models will be performed by presenting to the human user the predictions from two models and their explanations. Among the models, one is performing very well while the other has a lower performance. Explanations regarding the better model should make more sense to the user. Explanations on wrong predictions from the second model should on the other hand be meaningless: an explanation telling the user that a passenger of the Titanic died because she was a lady from the first class should be a sign that the model doesn't extract meaningful information. Indeed, being a woman and a first class passenger on the titanic greatly increases the chances of survival.
+
+The best model is a random forest with 250 trees. Its ROC AUC is 0.96, which is very high. The bad model is built upon the first one by randomly changing the predicted probabilities of the first model. The second model's predictions is drawn from a normal distribution, centered on the first model's predictions, with a standard deviation of 0.3. This lowers the AUC to 0.80.
+
+The user is provided with 20 examples from the test dataset, and must pick the best one according to the explanations of the predictions on these 20 examples.
+
+
+***** RESULTS: on average, the users have 0.90 chance to pick the right with treeinterpretor / lime quartiles / lime entropy discretizer / explanation vectors, etc... *****
+
+***** Presentation of the explanations for one particular example, one where Lime is good and expl vectors is bad. *****
+
+\subsection{Lime}
+
+\subsection{Treeinterpreter}
+
+\subsection{Explanation vectors}
+
+
 
 \section{20 news group}
 
