@@ -4,6 +4,7 @@
 \usepackage{amsfonts}
 \usepackage{textcomp}
 \usepackage{graphicx}
+\usepackage{array}
 \usepackage{hyperref}
 \usepackage{lmodern}
 \usepackage[utf8]{inputenc}
@@ -450,13 +451,19 @@ That way, the baseline score of the model is the score on the validation set: th
 
 When the untrustworthy features are identified by the user, these features are removed from the original set -- the train and test datasets. Then a new model is retrained and scored, both on the test set and on the clean validation set. The score on the test set may decrease, but it should get closer to the score on the validation set. Indeed, the algorithm is now supposed to be based on more trustworthy features, and the score on the test set should reflect more precisely the ability of the model to generalize on new data.
 
-\section{Machine learning models}
+\section{Machine Learning models}
+
+\subsection{Machine Learning estimators}
 
 The purpose of this thesis is to find and test several algorithms that would have practical use at Dataiku and in the industry in general. This is why popular models will be tested: models that are widely used in production in many datascience projects.
 
 Therefore four models will be tested, two linear models: \textit{linear regression} and \textit{logistic regression}, and two tree-based models: \textit{Random Forests} \cite{Breiman2001} and \textit{Gradient Boosting} \cite{Friedman2001}. Nonetheless, regarding model-independant explanations, any type of predictive model could be used, as long as it outputs either classification probability, or a regression prediction, like neural networks for instance.
 
-To measure the performance of the machine learning models, the Receiver Operating Characteristic (ROC) is used.
+\subsection{Metrics}
+
+The machine learning algorithms will be applied on test datasets to measure their performance. As they produce prediction probabilities as output, the Reciever Operating Characteristics (ROC) curve will be used as a performance metrics on these algorithms. The algorithm score on a test dataset will therefore be the Area Under Curve (AUC) of the ROC curve.
+
+Building a ROC curve consists in plotting \textit{sensitivity} given the \textit{anti-specificity} of a binomial classifier. The sensitivity, also called true positive rate, is the rate of well-classified positive examples and the anti-specificity is the false positive rates, ie: the rate of negative examples marked as positive by the classifier. If the classifier only outputs the predicted classes (1 and 0 for instance), the result would be a single point on the true-positive-rate versus false-positive-rate graph. But using classifiers that output probabilities, it is possible to use a moving threshold: examples predicted as positive can either be those with probability 0.8, 0.5, 0.3 or any value between 0 and 1. The sensitivity and anti-specificity vary when this threshold is changed, which creates a set of point for a single classifier. Plotting these points creates a ROC curve.
 
 \section{Algorithms tested}
 
@@ -482,43 +489,22 @@ The various methods will be tested on several datasets.
 
 The regression dataset that will be used here is the House Market Dataset in Ames, Iowa. The target is the house prices and the dataset contains 80 attributes, such as the size of the land, the area of the house, the neighborhood, or even the type of fence around the property. The main interest of this dataset is the number of features, compared to the classical Boston Housing dataset. It should therefore be much more representative of the common data found in practical problems today, where datasets featuring around one hundred features is very common.
 
-The method will also be tested on part of the 20 News Group Dataset. This dataset is interesting for several reasons: it is textual data, meaning the dimensionnality is high. Moreover, the data is very noisy: the data are e-mails, with their headers and previous messages embedded. Therefore, it is very likely that a classifier would rely on wrong features such as words in the headers, or e-mail addresses and not the actual text.
-
-Finally for classical classification, the German Credit dataset from UCI will be used.
+The method will also be tested on part of the 20 News Groups Dataset. This dataset is interesting for several reasons: it is textual data, meaning the dimensionnality is high. Moreover, the data is very noisy: the data are e-mails, with their headers and previous messages embedded. Therefore, it is very likely that a classifier would rely on wrong features such as words in the headers, or e-mail addresses and not the actual text.
 
 
 \chapter{Experiments}
 
-\section{Titanic dataset}
+Two similar experiments will be performed on two different datasets. The goal of the various explanation algorithms will be to find in the set of features the ones that are not meaningful in the data. Training again a new model on the new set of features should increase the score. Explanation algorithms will be judged given this increase of the score.
 
-The firsts experiments will be performed on the well-known Titanic dataset. This dataset consists on the list of the Titanic passengers with several information provided on them. The train set contains the information about the person having died in the tragedy or not, and the goal of the model is to predict the chances of survival for people on the test dataset.
+The initial dataset will therefore contain \textit{good} and \textit{bad} variables, meaning that some features should have a real meaning, while some other are falsely correlated to the target. Outputs of the explanations for a given prediction are presented to a human user, that will see which features are the most influential to the prediction. The user then decides to remove the meaningless features that are influential, hoping that removing these false correlations will increase the generalizability of the model.
 
-Here we will be using a subset of the features: the passenger's age, sex and class, in which port he or she embarked, the ticket fare, and the number of parents or children spouses or siblings aboard, which makes a total of seven features.
+To test this generalizability, there will be two datasets: one test dataset, similar to the train set, and one validation set that does not contain the meaningless features --- value zero is set for all these variables on this set. Therefore, a model that rely too much on these variables should perform badly on this validation dataset.
 
-This first experiment comparison between several explanation models will be performed by presenting to the human user the predictions from two models and their explanations. Among the models, one is performing very well while the other has a lower performance. Explanations regarding the better model should make more sense to the user. Explanations on wrong predictions from the second model should on the other hand be meaningless: an explanation telling the user that a passenger of the Titanic died because she was a lady from the first class should be a sign that the model doesn't extract meaningful information. Indeed, being a woman and a first class passenger on the titanic greatly increases the chances of survival.
-
-The best model is a random forest with 250 trees. Its ROC AUC is 0.96, which is very high. The bad model is built upon the first one by randomly changing the predicted probabilities of the first model. The second model's predictions is drawn from a normal distribution, centered on the first model's predictions, with a standard deviation of 0.3. This lowers the AUC to 0.80.
-
-The user is provided with 20 examples from the test dataset, and must pick the best one according to the explanations of the predictions on these 20 examples.
-
-
-***** RESULTS: on average, the users have 0.90 chance to pick the right with treeinterpretor / lime quartiles / lime entropy discretizer / explanation vectors, etc... *****
-
-***** Presentation of the explanations for one particular example, one where Lime is good and expl vectors is bad. *****
-
-\subsection{Lime}
-
-\subsection{Treeinterpreter}
-
-\subsection{Explanation vectors}
-
-
-
-\section{20 news group}
+\section{20 news groups and Random Forest}
 
 As stated in the methodology part, to assess the performance of an explanation algorithm, we will try to check if it manages to improve a bad algorithm. This means relying on the user's previous knowledge on the data.
 
-A good way to build a bad model is to train it over bad data. The 20 news group dataset is perfect for that, as it is very noisy. It consists on a series of messages on various topics. The noise comes from the presence of the email headers such as:
+A good way to build a bad model is to train it over bad data. The 20 news groups dataset is perfect for that, as it is very noisy. It consists on a series of messages on various topics. The noise comes from the presence of the email headers such as:
 
 \footnotesize
 \begin{verbatim}
@@ -530,26 +516,71 @@ A good way to build a bad model is to train it over bad data. The 20 news group 
 \end{verbatim}
 \normalsize
 
-Moreover, there are quotations from previous messages, which can also worsen the classifier's performances.
+Moreover, there are also quotations from previous messages, which can also worsen the classifier's performances, as the real content for an efficient classification should only be what the user wrote.
 
-In this experiments, we will only keep subsets of the 20 news group dataset consisting of the classes \textit{alt.atheism} and \textit{soc.religion.christian}. The goal of the classifier is to determine whether the document was about atheism or religion.
+In this experiments, we will only keep subsets of the 20 news groups dataset consisting of the classes \textit{alt.atheism} and \textit{soc.religion.christian}. The goal of the classifier is to determine whether the document was about atheism or religion.
 
 To build the initial classifier, the process will be the following: compute the \textit{Term Frequencies-Inverse Document Frequencies} (Tf-Idf) of the corpus, and train a machine learning algorithm on the Tf-Idf. Then the user observes a series of examples and their explanations. The bad features that show up in the explanations, such as words from the header, are removed, Tf-Idf is recomputed and a new model is trained.
 
+The models are applied on both the test set, and clean validation set for which the email headers and the quotes have been removed. A good algorithm should generalize well on the validation set, and scores on the test set and the validation set should be close. Of course, having removed the headers (that bring noise into the data) only on the validation set, we expect the scores to be different.
+
 The ROC curves that are obtained when scoring the model on the test dataset and the clean validation dataset are plotted on figure 4.2.
 
-\begin{figure}[h]
+Note that due to training time, it was not possible to compute explanations using the explanation vectors algorithm for this data set. The sampling process was simply taking too long, due to complexity issues and the large number of features: there are around 19000 different terms in this dataset.
+
+\begin{figure}[h!]
 		\centering
     	\def\svgwidth{\columnwidth}
     	\resizebox{0.75\textwidth}{!}{\input{img/roc-1.pdf_tex}}
-    	\caption{Roc curve on the noisy test dataset (\textit{blue}, Area under curve: 0.986) and on the clean validation set (\textit{green}, AUC: 0.880)}
+    	\caption{Roc curve on the noisy test dataset (\textit{blue}, Area under curve: 0.986) and on the clean validation set (\textit{green}, AUC: 0.870)}
 \end{figure}
 
-As expected, there is a large difference between the score on the test set, that features the headers and previous messages quotations, and the validation set, cleaned from these noisy parts. These ROC curves mean that the model generalize badly on a clean dataset that is quite different from the training set.
+As expected, there is a large difference between the score on the test set, that features the headers and previous messages quotations, and the validation set, cleaned from these noisy parts. These ROC curves mean that the model generalize badly on clean data: the model has learn noisy features from the presence of meaningless terms in the training set.
 
-Below are the results for the three kinds of explanations algorithms tested. The user is showed 20 examples from the dataset. These examples are the same in the three methods.
+The goal now is to build a new model, starting from this bad one, using insights given by explanation algorithms. The explanations should contain features on which the model relies the most. Removing the features that the user considers as bad should improve the algorithm.
+
+Below are the results for the three kinds of explanations algorithms tested. 20 examples from the test dataset are shown to the user, who then removes the meaningless features. These 20 examples are the same in the three methods.
 
 \subsection{Treeinterpreter}
+
+Treeinterpreter inspects the split in all the trees of a forest to compute the influence of each variable, as explained in the \textit{Background} section.
+
+Here is an example of the explanation of one example made by treeinterpreter:
+
+\begin{figure}[!h]
+	\centering
+   	\def\svgwidth{\columnwidth}
+	\includegraphics[scale=0.35]{img/tree_interpreter.pdf}
+    \caption{Output of \textit{treeinterpreter} on one example}
+\end{figure}
+
+We clearly see that many terms are only part of the e-mail header, and not real content written by the author of the message. Here the user's e-mail address provider is \texttt{@athos.rudgers.com}, an undergraduate school in New Jersey. The e-mail address was probably extracted from the header, and strongly associated with one class as this user may have posted a lot of messages.
+
+Yet we do not want the classifier to rely on such features as they are only correlated with one of the classes on this small dataset: based on such features, a model would never generalize on new unseen data.
+
+\begin{figure}[h!]
+		\centering
+    	\def\svgwidth{\columnwidth}
+    	\resizebox{0.6\textwidth}{!}{\input{img/roc-treeinterpreter.pdf_tex}}
+    	\caption{Roc curve on the noisy test dataset (\textit{blue}, AUC score: 0.972) and on the clean validation set (\textit{green}, AUC score: 0.890) after removing words using \textit{TreeInterpreter}.}
+\end{figure}
+
+After observing 20 messages from the test set, along with the model predictions and the explanations, the human user decides to remove the following terms from the training data:
+
+\begin{center}
+\begin{verbatim}
+may, com, 1993, nntp, posting, re, co, gmt, ny, host, rutgers, 
+article, edu, okcforum, ma, uk, tm, cu, 2000, writes, apr, clh, 
+uga, wrote, inc, schneider, caltech, distribution, clh, cco, de, 
+faq, clh, bil
+\end{verbatim}
+\end{center}
+
+After retraining a new classifier on the new documents where the above words have been removed, the model slightly better: now the AUC on the clean validation dataset is 0.890, which is a better than the previous AUC on this set without removing any word --- 0.870, see previous section. Figure 4.3 presents the resulting ROC AUC. We can also note that the score on the noisy test dataset decreases, as features are removed. This was expected, and the real goal is to increase the score on the validation set, so such a decrease is not a problem at all.
+
+Of course the score on the test set decreases, as the number of features that are both in the train and test sets decreases.
+
+But what is to be noted is the slight increase of the score on the validation set. This means that the models relies more on meaningful terms than before. The model can generalize more efficiently. 
 
 \subsection{Lime}
 
@@ -558,7 +589,7 @@ Lime outputs the following dashboard, featuring the score of the model on this e
 \begin{figure}[!h]
 	\centering
    	\def\svgwidth{\columnwidth}
-	\includegraphics[scale=0.35]{lime-output.png}
+	\includegraphics[scale=0.35]{img/lime-output.png}
     \caption{Example of output by Lime}
 \end{figure}
 
@@ -583,38 +614,117 @@ When removing these words from the original dataset, the new model reaches the f
 \begin{figure}[h]
 		\centering
     	\def\svgwidth{\columnwidth}
-    	\resizebox{0.75\textwidth}{!}{\input{img/roc-2.pdf_tex}}
-    	\caption{Roc curve on the noisy test dataset (\textit{blue}, AUC: 0.945) and on the clean validation set (\textit{green}, AUC: 0.902)}
+    	\resizebox{0.6\textwidth}{!}{\input{img/roc-lime.pdf_tex}}
+    	\caption{Roc curve on the noisy test dataset (\textit{blue}, AUC score: 0.945) and on the clean validation set (\textit{green}, AUC score: 0.902)}
 \end{figure}
 
-Of course the score on the test set decreases, as the number of features that are both in the train and test sets decreases.
+Lime, as well as treeinterpreter, manages to increase the score on the validation set, which proves that the model is now more general than before. But here it can be noticed that the two score on the test and the validation sets get much closer: the high AUC on the test set was misleading before, as there were many correlations between non meaningful terms and the target. Therefore, removing these meaningful features decreases the abnormally high score on the test set. 
 
-But what is to be noted is the increase of the score on the validation set. This means that the models relies more on meaningful terms than before. Moreover, the two score get closer: the high AUC on the test set was misleading before, as there were many correlations between the target and non meaningful terms.
+\section{20 news groups and a linear model}
 
+The results of the previous section showed important progress in improving the Random Forest classifier. But very sparse data such as texts, linear models are often preferred: they train much faster, can handle the large number of features easier than tree methods, and usually give good results.
 
-\subsection{Explanation vectors}
+Let's train a logistic regression on the 20 news groups dataset. The model performs slightly better than the random forest on the validation set, without taking out any term in the training set. As pictured on figure 4.6, the AUC on the test dataset is 0.976 and 0.917 on the validation set.
 
-\vspace{5.0\baselineskip}
+\begin{figure}[h]
+		\centering
+    	\def\svgwidth{\columnwidth}
+    	\resizebox{0.6\textwidth}{!}{\input{img/roc-lr.pdf_tex}}
+    	\caption{Roc curve on the noisy test dataset (\textit{blue}, AUC score: 0.976) and on the clean validation set (\textit{green}, AUC score: 0.917)}
+\end{figure}
 
-\begin{itemize}
-	\item First train model on bad text
-	\item Print expl with Tree Interpreter / Parzen / Lime
-	\item Retrain 3 models, check the best ones
-\end{itemize}
+On this model, two explanation algorithms can be used: the linear model explanations --- model dependant explanation described in section 2.1.1 --- and Lime again, which is model independant. Let's apply both and try to increase the validation score with a logistic regression.
 
+\subsection{Lime on linear model}
 
-Also needed:
+Just like with a random forest, Lime can be applied on a logistic regression. The same process is applied here: 20 examples are shown to a human user, who decides to remove features that are meaningless for this application. So words that are inconsistent with the decision to classify a text in a category or another are removed.
 
-\begin{itemize}
-	\item Check several bandwidths for Parzen \& Lime
-	\item Check several binning algos for Lime
-	\item Use Lime to analyse a linear algo \& compare results with real coefs.
-\end{itemize}
+The useless word list gathered from the 20 examples is the following: 
 
+\begin{center}
+\begin{verbatim}
+ai uga Michael Covington uxa uiuc edu Steve writes mangoe 
+umd Livesey cs NNTP Posting Host okcforum Bill psuvm psu 
+wam livesey solntze wpd sgi com mathew mantis co uk Mantis
+Newsreader UK Mussack
+\end{verbatim}
+\end{center}
+
+After retraining a new model on the train set where those words have been removed, we reach the following score on the test and validation set: AUC is 0.989 on the test set, and 0.925 on the validation set. The corresponding ROC curves are plotted on figure 4.7.
+
+\begin{figure}[h!]
+		\centering
+    	\def\svgwidth{\columnwidth}
+    	\resizebox{0.6\textwidth}{!}{\input{img/roc-lime-lr.pdf_tex}}
+    	\caption{Roc curve on the noisy test dataset (\textit{blue}, AUC score: 0.989) and on the clean validation set (\textit{green}, AUC score: 0.925)}
+\end{figure}
+
+Contrary to the random forest case, this small cleaning increased the score on the test set. This is probably due to the fact that at each split a decision tree relies on the best feature, while the logistic regression handles all the features at once. Therefore noisy correlations between some features and the target can lower the score.
+
+The increase on the validation dataset is very small. Nevertheless, it did increase the score. Showing the user more examples could probably have a stronger impact: here only 33 words have been removed, while the total number of features is around $19000$.
+
+Let us compare Lime's performances with the model dependant explanation on linear models.
+
+\subsection{Linear model dependant explanation}
+
+This kind of explanation, described in section 2.1.1, can be seen as the naïve approach for explaining linear model outcomes. 
+
+As a reminder for the reader: this method just computes the element-wise product between feature values of the example and the coefficients of the linear model. The model output is directly proportional to the sum of this product. So determining which features have been the most influential on the prediction can be viewed as knowing which features contributed the most to this sum.
+
+After computing the influential features for the 20 examples presented to a human individual, the meaningless terms are removed. On figure 4.8, the ROC curve of the new trained model is displayed: AUC score is 0.988 on the test dataset, and 0.922 on the validation set.
+
+\begin{figure}[h!]
+		\centering
+    	\def\svgwidth{\columnwidth}
+    	\resizebox{0.6\textwidth}{!}{\input{img/roc-linear-expl-lr.pdf_tex}}
+    	\caption{Roc curve on the noisy test dataset (\textit{blue}, AUC score: 0.988) and on the clean validation set (\textit{green}, AUC score: 0.924)}
+\end{figure}
+
+Here again, the increase of the score on the validation set is slight but substantial.
+
+\section{Titanic dataset}
+
+The second experiment will use a regular tabular dataset, with numbers, as opposed to a textual dataset like in the previous section. The experiment will be performed on the well-known Titanic dataset. This dataset consists on the list of the Titanic passengers with several information provided on them. The train set contains the information about the person having died in the tragedy or not, and the goal of the model is to predict the chances of survival for people on the test dataset.
+
+Here we will be using a subset of the features: the passenger's age, sex, the ticket fare, the number of parents or children aboard, the number of spouses or siblings aboard. The passenger class is also used as a binary variable: 1 if the passenger travels in class 1 or 2, 0 for class 3. This makes a total of 6 variables.
+
+All of the aforementioned variables are meaningful and actually represent a Titanic passenger. Therefore, to this set of variables, we will add a series of 8 meaningless variables. These new variables consist in combinations of the 6 original variables, like age times ticket fare, age times passenger class, sex plus class, etc. To these combinations are added a random gaussian noise. This creates correlation between variables, without them to have a real meaning in the dataset.
+
+These features are added to the set of variables, and a model is trained --- a random forest with 200 trees.
+
+Four explanation algorithms are used here: Tree Interpreter, the explanation vectors, Lime with a quartile discretizer and Lime with the entropy discretizer.
+
+Each explanation algorithm is applied on 20 examples. These examples are presented to the user that decide to remove the meaningless features when they have too much importance. As opposed to the last section, here the bad variables are explicit: they are the one added by combining the original variables. Therefore the user does not have to be very clever: this work can be automated. But this actually simulates a situation where the user have a background knowledge on the data but cannot go through all the variables and check them manually.
+
+In the same way, the dataset is splitted into three parts: a training set, a test set and a validation set. The validation set is cleaned from the meaningless features: for these variables the observation is always zero.
+
+The initial ROC curve of the random forest on the noisy test set and the validation set is drawn on figure ..... The AUC on the test set is 0.907 while on the validation set, it is 0.837. That means, like in the 20 news groups case, that the model relies somehow on the meaningless features: if this was not the case the scores on the test and validation set should be closer.
+
+The user is presented with the explanations for 20 examples from the test set. For all these examples, it has been decided that if a meaningless features falls in the top 3 influential features on the prediction, it should be removed. This ensure that all the bad variables are not all removed, simulating the fact that the user cannot manually remove all the features at once. On the 20 examples, over the 8 added features, usually 3 or 4 fall in the top 3 and are removed.
+
+After having removed the features, new random forests are trained with the same parameters. The results are presented on the table figure ....
+
+\begin{figure}
+	\end{figure}
+	\begin{table}[h!]
+  		\centering
+  		\begin{tabular}{ c | c }
+       		\includegraphics[width=\linewidth, height=60mm]{\input{img/roc-linear-expl-lr.pdf_tex}}
+    		&
+       		\includegraphics[width=\linewidth, height=60mm]{\input{img/roc-linear-expl-lr.pdf_tex}}
+    		\\ \hline
+       		\includegraphics[width=\linewidth, height=60mm]{\input{img/roc-linear-expl-lr.pdf_tex}}
+    		&
+       		\includegraphics[width=\linewidth, height=60mm]{\input{img/roc-linear-expl-lr.pdf_tex}}
+  		\end{tabular}
+	\end{table}
+	%\caption{Roc curve on the noisy test dataset (\textit{blue}, AUC score: 0.988) and on the clean validation set (\textit{green}, AUC score: 0.924)}
+\end{figure}	
 
 \chapter{Discussions and conclusion}
 
 \section{Results summary}
+
 
 \section{Limitations}
 
