@@ -5,6 +5,7 @@
 \usepackage{textcomp}
 \usepackage{graphicx}
 \usepackage{array}
+\usepackage{pbox}
 \usepackage{hyperref}
 \usepackage{lmodern}
 \usepackage[utf8]{inputenc}
@@ -14,8 +15,12 @@
 \usepackage[backend=biber]{biblatex}
 \usepackage{csquotes}
 \usepackage{tikz}
+\usepackage{color, colortbl}
 
 \def\arraystretch{1.5}
+
+\definecolor{LightGray}{gray}{0.93}
+\definecolor{Gray}{gray}{0.83}
 
 \addbibresource{ressources.bib}
 
@@ -162,9 +167,13 @@ where $(x_1, ..., x_n)$ is the current data point, and the values $(b_i)_{i \in 
 
 It is then easy to compute the contribution of the features to the outcome: as the output depends directly on the sum of the feature value multiplied by the regression coefficient, multiplying each regression coefficient by the feature value give the direct influence of the feature value on the prediction. Each term $b_i x_i$ represents therefore the influence of each feature to the output. In the case of linear regression, it is even the direct contribution to the output, but for logistic regression, the sigmoid function prevent from a meaningful comparison between each $b_i x_i$ and the predicted value.
 
-\begin{center}
-	[ Insert picture maybe ?]
-\end{center}
+\begin{figure}[!h]
+	\centering
+   	\def\svgwidth{\columnwidth}
+	\includegraphics[scale=0.5]{linear_explanation.png}
+    \caption{Feature contributions for a linear model.}
+\end{figure}
+
 
 The limit in interpretability of a linear model is only the dimension of the input space: if there are hundreds of features to consider, then another step is needed. It can simply be a list of the top $N$ coefficients, $N$ being small enough. But we could also consider a feature selection algorithm that keeps a small number of features before fitting the model.
 
@@ -269,7 +278,7 @@ For some authors, the way to understand a prediction is to locally estimate the 
 
 Thus, several solutions involve estimating the local output distribution from the model, like \textit{Lime} \cite{lime} and \citeauthor{explvect}'s \textit{explanation vectors} \cite{explvect}. If the model is a classifier that outputs probabilities, then the output distribution is a probability distribution in the feature space. 
 
-\subsection{Local estimation by a simpler model}
+\subsection{Lime: a local estimation by a simpler model}
 
 \textit{Lime} algorithm \cite{lime}, standing for \textit{Locally Interpretable Model-agnostic Explanations}, is a recent solution proposed by \citeauthor{lime}. The authors' main idea is to locally estimate a complicated model by a simpler one that is interpretable. The goal is then to find a new model that is a good local estimator of the complex model, so the new model should be locally faithful to the original model.
 
@@ -291,9 +300,24 @@ To locally approximate a model seen as a black box by a linear model, Lime's pro
     \caption{Local estimation by a linear model around the bold red cross}
 \end{figure}
 
-In the author's implementation \cite{limeGitHub}, the sampling is made after \textit{discretizing the training set}: each feature is splitted in several parts using a binning method (quantiles, histograms, supervized binning). Then each new sample is generated feature by feature following this binning. This may not be the most accurate way to mimic the training distribution but it is quite fast --- linear in the number of features. Furthermore, the goal is only to generate points in space, and the fact that some of them are distant from the initial point is not a problem since the gaussian kernel weighting (at step 3) will keep the linear model locally accurate: points that are far away will not be taken into account in the local model, while closer ones will be considered as most important.
+In the author's implementation \cite{limeGitHub}, the sampling is made after \textit{discretizing the training set}: each feature is splitted in several parts using a binning method (quantiles, histograms, supervized binning). Then each new sample is generated feature by feature following this binning. This may not be the most accurate way to mimic the training distribution but it is fast --- linear in the number of features --- and lead to a very fast sampling. Furthermore, the goal is only to generate points in space, and the fact that some of them are distant from the initial point is not a problem since the gaussian kernel weighting (at step 3) will keep the linear model locally accurate: points that are far away will not be taken into account in the local model, while closer ones will be considered as most important.
 
-Finally, the interpretation of the simple model is the easy part: it only requires to check the features associated to the biggest coefficients of the linear model. These biggest coefficient actually represent the locally most effective features that had the most importance on the prediction since variations on these features whould have led to the larger changes on the model output.
+In this thesis, we also tested a supervized binning: the bins along a given feature are created using the target values. This binning is based on entropy, meaning that at each step a split would minimize the entropy in the new bins. Such binning proves useful when data is not gaussian and very skewed: for instance, if more than 50\% of the points have value zero, then the first two quartiles consist only on these zero-value points. The entropy discretizer, on the contrary, will tend to explore more over the whole span of the data.
+
+At Dataiku, a good usecase for this discretizer has been on \textit{fraud detection data} for an online seller. When focusing on the number of credit card used per user, one would notice that more than 80\% of the users only use 1 single credit card, and a very few, potential fraudsters, uses 10 or more. Quartile discretizer here would only split the data between "1 credit card" points and "at least 2 credit card" points, while the entropy discretizer will notice that most fraudsters used a lot of different credit cards, and make several splits at higher values.
+
+\begin{figure}[h!]
+		\centering
+    	\def\svgwidth{\columnwidth}
+    	\input{img/skewed.pdf_tex}
+    	\caption{Skewd distribution binning using either quartiles (\textit{left}) or the entropy binning (\textit{right}). The entropy binning explores more the data than the quartiles that tend to stay close to the mode.}
+\end{figure}
+
+This new discretization method has been implemented and has led to a contribution in the original Lime repository \cite{limeGitHub}.
+
+\vspace{1em}
+
+Finally, the interpretation of the simple model is the easy part: it only requires to check the features associated to the biggest coefficients of the linear model (regarding the span of the feature). These biggest coefficient actually represent the locally most effective features that had the most importance on the prediction since variations on these features would have led to the larger changes on the model output.
 
 \subsection{Gradient of the model output distribution}
 
@@ -439,17 +463,35 @@ These kinds of explanations should give insight about how the distribution evolv
 
 \section{Performance measure}
 
-In this problem of finding explanations of individual predictions, the output cannot be evaluated as simply as an accuracy score. The output is here a list of variables along with a weighting score, and it is therefore much more qualitative than quantitative. Moreover an explanation algorithm can be helpful on a given dataset and not on another, but performance can also vary from an individual example to another one.
+Explanation algorithms produce readable output for human people: the list of influential features for a given prediction. Simply observing such an output to assess the pertinence of the explanation is therefore very subjective. One would think that a fraud detection algorithm \textit{should} rely on a set of features, while another one would think of some other variables. To remove this subjectivity and assess the performance of the explanation algorithms, evaluation will be made indirectly.
 
-Hence the measure of the performance of an algorithm will not be based directly on the algorithm output, but rather on its ability to help humans in understand and improve a model.
+The goal of the explanations in the following experiments will be to help human users to improve a bad classifier. The performance test will be the following: 
 
-The performance test for an algorithm will be the following: first a bad model will be trained on a given dataset. A \textit{bad model} is a model based on features that the user know not to be reliable. Then explanations are computed for several examples in the test dataset. A user is then asked to remove the features that does not seem trustworthy.
+\begin{itemize}
+	\item First a bad model will be trained on a given dataset
+	\item Explanations for predictions on 20 examples are computed
+	\item A user is then asked to remove the features that are not trustworthy among the most influential that the explanation showed him/her
+	\item Finally a new model is trained on the dataset where the features marked by the user have been removed.
+\end{itemize}
 
-To test the algorithm quantitatively, two datasets are needed apart from the training set: one test dataset in the same format as the train set, that is, not cleaned from the untrustworthy features, and a validation dataset that contains only the clean data.
+Figure 3.3 summarizes this process. This process relies on the belief that if an explanation algorithm is efficient, it would output the actual most influential features. Therefore, removing the irrelevant influential features would leave only the good ones, and the irrelevant ones that are not very influential. A new model would then only rely on the good features, and --- we hope --- perform better on unseen data.
 
-That way, the baseline score of the model is the score on the validation set: this is the score the model would obtain when applied on external data, it shows the ability for the model to generalize or not on new data. Meanwhile, the score on the unclean test set does not reflect the real performance of the model: this score should be probably higher than the one on the clean validation set. The higher the difference between these two score, the less trustworthy and generalizable the model is.
+\begin{figure}[h!]
+		\centering
+    	\includegraphics[scale=0.5]{img/method_schema.png}
+    	\caption{Performance measure of an explanation algorithm. The performance is measured indirectly by how a user manages to improve a classifier.}
+\end{figure}
 
-When the untrustworthy features are identified by the user, these features are removed from the original set -- the train and test datasets. Then a new model is retrained and scored, both on the test set and on the clean validation set. The score on the test set may decrease, but it should get closer to the score on the validation set. Indeed, the algorithm is now supposed to be based on more trustworthy features, and the score on the test set should reflect more precisely the ability of the model to generalize on new data.
+To test the algorithm, two datasets are needed apart from the training set: 
+
+\begin{itemize}
+	\item A \textit{test dataset} in the same format as the train set --- That is: not cleaned from the untrustworthy features
+	\item A \textit{validation dataset} that contains only the clean data with no irrelevant features.
+\end{itemize}
+
+The validation set is useful to test the generalizability of the model: if it performs well on both the test and the validation set, it is very generalizable. But if its score on the validation set is low, this is clearly not a good model. 
+
+Hence, the baseline score of the model is its score on the \textit{validation set}: this is the score the model would obtain when applied on external data, it shows the ability for the model to generalize or not on new data. Meanwhile, the score on the unclean test set does not reflect the real performance of the model: this score should be probably higher than the one on the clean validation set. The higher the difference between these two score, the less trustworthy and generalizable the model is.
 
 \section{Machine Learning models}
 
@@ -457,13 +499,17 @@ When the untrustworthy features are identified by the user, these features are r
 
 The purpose of this thesis is to find and test several algorithms that would have practical use at Dataiku and in the industry in general. This is why popular models will be tested: models that are widely used in production in many datascience projects.
 
-Therefore four models will be tested, two linear models: \textit{linear regression} and \textit{logistic regression}, and two tree-based models: \textit{Random Forests} \cite{Breiman2001} and \textit{Gradient Boosting} \cite{Friedman2001}. Nonetheless, regarding model-independant explanations, any type of predictive model could be used, as long as it outputs either classification probability, or a regression prediction, like neural networks for instance.
+Therefore two of the most used machine-learning models will be tested: \textit{logistic regression}, and \textit{Random Forests} \cite{Breiman2001}. Of course, if using model-independant explanations, any type of predictive model could be used, as long as it outputs either classification probability, or a regression prediction, like gradient boosted trees or neural networks for instance.
 
 \subsection{Metrics}
 
-The machine learning algorithms will be applied on test datasets to measure their performance. As they produce prediction probabilities as output, the Reciever Operating Characteristics (ROC) curve will be used as a performance metrics on these algorithms. The algorithm score on a test dataset will therefore be the Area Under Curve (AUC) of the ROC curve.
+The machine learning algorithms will be applied on test datasets to measure their performance. The logistic regression and random forests can output predicted probabilities, so the Reciever Operating Characteristics (ROC) will be used as a performance metrics on these algorithms. The algorithm score on a test dataset will therefore be the Area Under Curve (AUC) of the ROC curve.
 
-Building a ROC curve consists in plotting \textit{sensitivity} given the \textit{anti-specificity} of a binomial classifier. The sensitivity, also called true positive rate, is the rate of well-classified positive examples and the anti-specificity is the false positive rates, ie: the rate of negative examples marked as positive by the classifier. If the classifier only outputs the predicted classes (1 and 0 for instance), the result would be a single point on the true-positive-rate versus false-positive-rate graph. But using classifiers that output probabilities, it is possible to use a moving threshold: examples predicted as positive can either be those with probability 0.8, 0.5, 0.3 or any value between 0 and 1. The sensitivity and anti-specificity vary when this threshold is changed, which creates a set of point for a single classifier. Plotting these points creates a ROC curve.
+Building a ROC curve consists in plotting the \textit{sensitivity} given the \textit{anti-specificity} of a binomial classifier. The sensitivity, also called true positive rate, is the rate of well-classified positive examples and the anti-specificity is the false positive rates, ie: the rate of negative examples marked as positive by the classifier. 
+
+For a specific classifier that would predict directly the classes (0 and 1 for instance) and not probabilities for each class, the result would be a single point on the true-positive-rate versus false-positive-rate graph. But using classifiers that output probabilities, it is possible to use a moving threshold: examples predicted as positive can either be those with probability 0.8, 0.5, 0.3 or any value between 0 and 1. Therefore, the sensitivity and anti-specificity vary when this threshold is changed, which creates a set of point for a single classifier. Plotting these points creates a ROC curve.
+
+The goal is to get closer to the perfect classifier that would have zero false-positive, and 100\% true-positives. This point is located at coordinates $(0, 1)$ on a ROC graph: therefore, we want the ROC curve to make the most acute angle it is possible near the point $(0,1)$.
 
 \section{Algorithms tested}
 
@@ -473,9 +519,9 @@ As seen on Chapter 3 -- Background, this field of research led to many different
 
 As we will use either linear or tree-based models here, two kinds of model-dependant explanations will be used.
 
-For linear models, the simple explanation algorithm relying on the linear coefficients and the features value, presented in Chapter 3, will be applied. This solution works in a similar way for regression and classification, so it will not need any adjustments for linear regression or logistic regression.
+For linear models, the simple explanation algorithm relying on the linear coefficients and the features value, presented in Chapter 3, will be applied. The code has been implemented as a custom implementation for this thesis.
 
-When testing tree-based models, Tree Interpreter \cite{treeinterpreter}, implemente by the article author on github will be used for Random Forests. An adaptation for gradient boosting made by the author of this thesis will also be used.
+When testing tree-based models, Tree Interpreter will be used. It has been described in a blogpost \cite{treeinterpreter} and implemented on github by the blogpost author. An adaptation for gradient boosted trees made by the author of this thesis may also be used.
 
 \subsection{Model-independent}
 
@@ -485,11 +531,55 @@ These algorithms are the most recent and above all: the fastest regarding comput
 
 \section{Datasets}
 
-The various methods will be tested on several datasets.
+The various methods will be tested on two different datasets. The Titanic dataset will be used to test the algorithms on a classical classification dataset. Some algorithms will also be applied on textual data --- a subset of the 20 news groups dataset.
 
-The regression dataset that will be used here is the House Market Dataset in Ames, Iowa. The target is the house prices and the dataset contains 80 attributes, such as the size of the land, the area of the house, the neighborhood, or even the type of fence around the property. The main interest of this dataset is the number of features, compared to the classical Boston Housing dataset. It should therefore be much more representative of the common data found in practical problems today, where datasets featuring around one hundred features is very common.
+The goal of the experiments is here to simulate a situation where there are many noisy features in the data, but the user cannot process them manually due to the high number of features. This situation would seem a bit artificial with these datasets, as the noisy/irrelevant features could actually be removed by an algorithm. But this is due to the evaluation method of the explanation algorithms.
 
-The method will also be tested on part of the 20 News Groups Dataset. This dataset is interesting for several reasons: it is textual data, meaning the dimensionnality is high. Moreover, the data is very noisy: the data are e-mails, with their headers and previous messages embedded. Therefore, it is very likely that a classifier would rely on wrong features such as words in the headers, or e-mail addresses and not the actual text.
+Hence, the user will only remove the retrieved feature above a certain threshold: for the Titanic dataset, an irrelevant feature is removed only if it is in the top 3 influential feature for a given prediction. This simulates a situation where the user cannot access all the features in the same time.
+
+\subsection{The Titanic dataset}
+
+The well-known Titanic dataset will be reduced to its numerical columns. This dataset consists on the list of the Titanic passengers with several information provided on them. The set contains the information about the passenger, and the goal of the model is to predict whether a given individual survived or not the tragedy. Probabilistic algorithms actually predict the chances of survival for people on the test dataset rather than the death or survival.
+
+Here we will be using a subset of the features: the passenger's age, sex, the ticket fare, the number of parents or children aboard, the number of spouses or siblings aboard. The passenger class is also used as a binary variable: 1 if the passenger travels in class 1 or 2, 0 for class 3. This makes a total of 6 variables.
+
+As stated in section 3.5.1, the subset of the Titanic dataset that will be used here contains six numerical variables. All of them are meaningful and actually represent a Titanic passenger. Therefore, to this set of variables, a series of 8 meaningless variables will be added. These new variables consist in combinations of the 6 original variables, like age times ticket fare, age times passenger class, sex plus class, etc. To these combinations a random Gaussian noise is added. This creates correlation between variables, without them to have a real meaning in the dataset.
+
+These features are added to the set of variables to form this 14-variable dataset.
+
+The set is split into a train dataset, and test set and a clean validation set. For this last set, all the 8 meaningful variables have the same value for all the observations: these variables are all set to zero. There are 750 examples on the train set, 100 in the test dataset and 100 in the validation set.
+
+\subsection{The 20 Newsgroups dataset}
+
+The method will also be tested on part of the 20 News Groups Dataset. It consists on around 20,000 newsgroup documents, split into 20 different groups. In this dataset, we will only be using two classes: \textit{alt.atheism} and \textit{soc.religion.christian}. The classification problem becomes binary: is the posting user talking about atheism or Christianity. 
+
+This dataset is interesting for several reasons: it is textual data, meaning the dimensionality is high. And above all, the data is very noisy: the data is e-mail-formatted text, with their headers and quotations from previous messages embedded. Therefore, it is very likely that a classifier would partly rely on wrong features, such as words in the header or e-mail addresses and not the actual text.
+
+An example in this dataset will look like this:
+\begin{center}
+\begin{verbatim}
+From: jonh@david.wheaton.edu (Jonathan Hayward)
+Subject: Re: Pantheism & Environmentalism
+Organization: Wheaton College, IL
+Lines: 46
+
+In article <Apr.5.23.31.36.1993.23919@athos.rutgers.edu> by028@cleveland.freenet.edu (Gary V. Cavano) writes:
+>I'm new to this group, and maybe this has been covered already,
+>but does anybody out there see the current emphasis on the
+>environment being turned (unintentionally, of course) into
+>pantheism?
+
+Yes.
+(I am adamantly an environmentalist.  I will not use styrofoam table service.
+Please keep that in mind as you read this post - I do not wish to attack
+environmentalism)
+[...]
+\end{verbatim}
+\end{center}
+
+To build the initial classifier, the process will be the following: compute the \textit{Term Frequencies-Inverse Document Frequencies} (Tf-Idf) of the corpus, and train a machine learning algorithm on the Tf-Idf. Then the user observes a series of examples and their explanations. The irrelevant words that show up in the explanation --- in the top 10 influential words --- such as words from the header, are removed, Tf-Idf is recomputed and a new model is trained.
+
+The models are applied on both the test set, and the clean validation set for which the email headers and the quotes have been removed. A good algorithm should generalize well on the validation set, and scores on the test set and the validation set should be close. Of course, having removed the headers (that bring noise into the data) only on the validation set, we expect the scores to be different.
 
 
 \chapter{Experiments}
@@ -502,29 +592,7 @@ To test this generalizability, there will be two datasets: one test dataset, sim
 
 \section{20 news groups and Random Forest}
 
-As stated in the methodology part, to assess the performance of an explanation algorithm, we will try to check if it manages to improve a bad algorithm. This means relying on the user's previous knowledge on the data.
-
-A good way to build a bad model is to train it over bad data. The 20 news groups dataset is perfect for that, as it is very noisy. It consists on a series of messages on various topics. The noise comes from the presence of the email headers such as:
-
-\footnotesize
-\begin{verbatim}
-	From: lerxst@wam.umd.edu (where's my thing)
-	Subject: WHAT car is this!?
-	Nntp-Posting-Host: rac3.wam.umd.edu
-	Organization: University of Maryland, College Park
-	Lines: 15
-\end{verbatim}
-\normalsize
-
-Moreover, there are also quotations from previous messages, which can also worsen the classifier's performances, as the real content for an efficient classification should only be what the user wrote.
-
-In this experiments, we will only keep subsets of the 20 news groups dataset consisting of the classes \textit{alt.atheism} and \textit{soc.religion.christian}. The goal of the classifier is to determine whether the document was about atheism or religion.
-
-To build the initial classifier, the process will be the following: compute the \textit{Term Frequencies-Inverse Document Frequencies} (Tf-Idf) of the corpus, and train a machine learning algorithm on the Tf-Idf. Then the user observes a series of examples and their explanations. The bad features that show up in the explanations, such as words from the header, are removed, Tf-Idf is recomputed and a new model is trained.
-
-The models are applied on both the test set, and clean validation set for which the email headers and the quotes have been removed. A good algorithm should generalize well on the validation set, and scores on the test set and the validation set should be close. Of course, having removed the headers (that bring noise into the data) only on the validation set, we expect the scores to be different.
-
-The ROC curves that are obtained when scoring the model on the test dataset and the clean validation dataset are plotted on figure 4.2.
+For the first experiment on the 20 newsgroups dataset, a Random Forest will be used as the machine learning algorithm over the Tf-Idf-transformed data. The ROC curves that are obtained when scoring the model on the test dataset and the clean validation dataset are plotted on figure 4.2.
 
 Note that due to training time, it was not possible to compute explanations using the explanation vectors algorithm for this data set. The sampling process was simply taking too long, due to complexity issues and the large number of features: there are around 19000 different terms in this dataset.
 
@@ -661,7 +729,7 @@ After retraining a new model on the train set where those words have been remove
 
 Contrary to the random forest case, this small cleaning increased the score on the test set. This is probably due to the fact that at each split a decision tree relies on the best feature, while the logistic regression handles all the features at once. Therefore noisy correlations between some features and the target can lower the score.
 
-The increase on the validation dataset is very small. Nevertheless, it did increase the score. Showing the user more examples could probably have a stronger impact: here only 33 words have been removed, while the total number of features is around $19000$.
+The increase on the validation dataset is very small. Nevertheless, it did increase the score. Showing the user more examples could probably have a stronger impact: here only 33 words have been removed, while the total number of features is around $19,000$.
 
 Let us compare Lime's performances with the model dependant explanation on linear models.
 
@@ -684,53 +752,138 @@ Here again, the increase of the score on the validation set is slight but substa
 
 \section{Titanic dataset}
 
-The second experiment will use a regular tabular dataset, with numbers, as opposed to a textual dataset like in the previous section. The experiment will be performed on the well-known Titanic dataset. This dataset consists on the list of the Titanic passengers with several information provided on them. The train set contains the information about the person having died in the tragedy or not, and the goal of the model is to predict the chances of survival for people on the test dataset.
+As explained in section 3.5.1, the set of variables that will be used consists in 6 numerical features from the Titanic dataset and 8 additional irrelevant variables. A Random Forest with 100 trees is trained on this set.
 
-Here we will be using a subset of the features: the passenger's age, sex, the ticket fare, the number of parents or children aboard, the number of spouses or siblings aboard. The passenger class is also used as a binary variable: 1 if the passenger travels in class 1 or 2, 0 for class 3. This makes a total of 6 variables.
-
-All of the aforementioned variables are meaningful and actually represent a Titanic passenger. Therefore, to this set of variables, we will add a series of 8 meaningless variables. These new variables consist in combinations of the 6 original variables, like age times ticket fare, age times passenger class, sex plus class, etc. To these combinations are added a random gaussian noise. This creates correlation between variables, without them to have a real meaning in the dataset.
-
-These features are added to the set of variables, and a model is trained --- a random forest with 200 trees.
-
-Four explanation algorithms are used here: Tree Interpreter, the explanation vectors, Lime with a quartile discretizer and Lime with the entropy discretizer.
+Four explanation algorithms are used here: Tree Interpreter, the explanation vectors, Lime with the quartile discretizer and Lime with the entropy discretizer.
 
 Each explanation algorithm is applied on 20 examples. These examples are presented to the user that decide to remove the meaningless features when they have too much importance. As opposed to the last section, here the bad variables are explicit: they are the one added by combining the original variables. Therefore the user does not have to be very clever: this work can be automated. But this actually simulates a situation where the user have a background knowledge on the data but cannot go through all the variables and check them manually.
 
 In the same way, the dataset is splitted into three parts: a training set, a test set and a validation set. The validation set is cleaned from the meaningless features: for these variables the observation is always zero.
 
-The initial ROC curve of the random forest on the noisy test set and the validation set is drawn on figure ..... The AUC on the test set is 0.907 while on the validation set, it is 0.837. That means, like in the 20 news groups case, that the model relies somehow on the meaningless features: if this was not the case the scores on the test and validation set should be closer.
+The initial ROC curve of the random forest on the noisy test set and the validation set is drawn on figure 4.9. The AUC on the test set is 0.907 while on the validation set, it is 0.837. That means, like in the 20 news groups case, that the model relies somehow on the meaningless features: if this was not the case the scores on the test and validation set should be closer.
+
+\begin{figure}[h!]
+		\centering
+    	\def\svgwidth{\columnwidth}
+    	\resizebox{0.6\textwidth}{!}{\input{img/titanic-roc-rf.pdf_tex}}
+    	\caption{Roc curve of the initial model on the noisy test dataset (\textit{blue}, AUC score: 0.907) and on the clean validation set (\textit{green}, AUC score: 0.837)}
+\end{figure}
 
 The user is presented with the explanations for 20 examples from the test set. For all these examples, it has been decided that if a meaningless features falls in the top 3 influential features on the prediction, it should be removed. This ensure that all the bad variables are not all removed, simulating the fact that the user cannot manually remove all the features at once. On the 20 examples, over the 8 added features, usually 3 or 4 fall in the top 3 and are removed.
 
-After having removed the features, new random forests are trained with the same parameters. The results are presented on the table figure ....
+After having removed the features, new random forests are trained with the same parameters. The results are presented on table 4.1.
 
-\begin{figure}
-	\end{figure}
-	\begin{table}[h!]
-  		\centering
-  		\begin{tabular}{ c | c }
-       		\includegraphics[width=\linewidth, height=60mm]{\input{img/roc-linear-expl-lr.pdf_tex}}
-    		&
-       		\includegraphics[width=\linewidth, height=60mm]{\input{img/roc-linear-expl-lr.pdf_tex}}
-    		\\ \hline
-       		\includegraphics[width=\linewidth, height=60mm]{\input{img/roc-linear-expl-lr.pdf_tex}}
-    		&
-       		\includegraphics[width=\linewidth, height=60mm]{\input{img/roc-linear-expl-lr.pdf_tex}}
-  		\end{tabular}
-	\end{table}
-	%\caption{Roc curve on the noisy test dataset (\textit{blue}, AUC score: 0.988) and on the clean validation set (\textit{green}, AUC score: 0.924)}
-\end{figure}	
+\begin{table}[ht]
+  \begin{tabular}{c|c}
+		\pbox{0.5\textwidth}{
+			\resizebox{0.5\textwidth}{!}{\input{img/titanic-roc-lime-quartiles.pdf_tex}} \\ 
+			Lime - quartile discretizer \\
+			\textit{AUC on test set: 0.891} \\
+			\textit{AUC on validation set: 0.867} \\} &
+			
+		\pbox{0.5\textwidth}{
+			\resizebox{0.5\textwidth}{!}{\input{img/titanic-roc-lime-entropy.pdf_tex}} \\
+			Lime - entropy discretizer \\
+			\textit{AUC on test set: 0.881} \\
+			\textit{AUC on validation set: 0.868} \\} \\ \hline
+			
+		\pbox{0.5\textwidth}{
+			\resizebox{0.5\textwidth}{!}{\input{img/titanic-roc-tree-interpreter.pdf_tex}} \\
+			TreeInterpreter \\
+			\textit{AUC on test set: 0.894} \\
+			\textit{AUC on validation set: 0.854.} \\} &
+			
+		\pbox{0.5\textwidth}{
+			\resizebox{0.5\textwidth}{!}{\input{img/titanic-roc-parzen.pdf_tex}} \\
+			Explanation vectors \\
+			\textit{AUC on test set: 0.905} \\
+			\textit{AUC on validation set: 0.833.} \\}
+	\end{tabular}
+  \caption{Roc curves on new models trained after removing irrelevant features. The explanation algorithm used is indicated as well as the AUC of the new model on both test and validation set.}
+\end{table}
+
+It can be noted that the AUC are very close when using Lime, and that the ROC curves are the closest with the entropy discretizer. TreeInterpreter and the explanation vectors manage to reduce somehow the gap between the AUCs, but it keeps relatively important compared to the initial gap.
 
 \chapter{Discussions and conclusion}
 
+In this thesis, several explanation methods have been confronted to one another. This chapter summaries the obtained results. Advantages and limits of the tested explanation algorithms are then discusses, and several possible improvement and paths for further investigation are proposed.
+
 \section{Results summary}
 
+First, experiments on both the Titanic and the 20 Newsgroups dataset showed that removing meaningless features can greatly improve generalizability of a model. Having such results is quite interesting, but this was expected.
+
+But what is at stake here is the way explanations algorithms can help users improving models. A model that manages to output a influential meaningless feature provides valuable information. Therefore, good explanation algorithms are those that makes it easier for users to spot bad features among the most influential ones: these are the features that are the most likely to introduce noise in the model.
+
+Table 5.1 is a summary of the increase of score of the model after having removed the influential bad features on the 20 newsgroups dataset. The greater increase the better for each explanation algorithm.
+
+\begin{table}[ht]
+\centering
+  \begin{tabular}{|r|c|c|}
+  	  \hline
+	 Model &  \cellcolor{Gray} Random Forest &  \cellcolor{Gray} Logistic Regression \\ \hline
+	 Lime & 0.032 & 0.008 \\ \hline
+	 TreeInterpreter & 0.020 & N/A \\ \hline
+	 Linear explanation & N/A & 0.007 \\ \hline
+	 Explanation vectors & \multicolumn{2}{c}{N/A - Too long to compute}
+	 \\ \hline
+  \end{tabular}
+  \caption{Increase in AUC after having removed meaningless features using a given explanation algorithm.}
+\end{table}
+
+On this dataset, Lime performs better than TreeInterpreter and the simple Linear interpreter, though the difference on the linear model is not really significant.
+
+On the Titanic dataset, all the explanation algorithms are applied on a Random Forest's predictions. Table ... 
+
+\begin{table}[ht]
+\centering
+  \begin{tabular}{|r|c|}
+  	  \hline
+	 Model &  \cellcolor{Gray} Random Forest \\ \hline
+	 Lime - quartiles discretizer & 0.030\\ \hline
+	 Lime - entropy discretizer & 0.031\\ \hline
+	 Tree interpreter & 0.016\\ \hline
+	 Explanation vectors & $-0.04$\\ \hline
+  \end{tabular}
+  \caption{Increase in AUC after having removed meaningless features using a given explanation algorithm.}
+\end{table}
+
+Here again, Lime is the most efficient in spotting the most influential features. It makes it easier for the user to remove the worthless influential variables from the data. TreeInterpreter performs quite well too. The explanation vectors, albeit looking promising on paper, do not get really interesting in practise. This limitation is discussed in section 5.2.
+
+Overall, among all the algorithms tested, Lime seems to be the better: it spots the influential features for each prediction efficiently compared to the others. Moreover, computation is often fast, and can be speeded up by reducing the number of samples --- of course, this reduces its performances at some point.
+
+The supervized binning based on entropy has similar results than using the quartiles as discretization method. These datasets are probably not the best one to show any improvement by the entropy binning. But, as stated in section  2.2.1, some improvement has been noticed on very skewed data.
 
 \section{Limitations}
 
+Despite providing valuable information about predictions to users, these methods suffer from several limitations. These limitations are usually different for each algorithm, so one should ponder over what is expected from the explanations, and which constraints are present.
+
+\vspace{1em}
+
+On TreeInterpreter and the Linear explanations, the main limitation is due to their model-dependant nature: these algorithms rely on the architecture of the machine learning model they try to explain. Therefore, they can only be used on one type of model, namely tree based models or linear models.
+
+Moreover, when analysing classification and decision trees, it is not easy to get insights on how will behave the model when moving some feature values. Therefore, one cannot easily know if increasing a feature would increase or decrease the model output. This kind of information remains important in many cases where the list of influential alone is not sufficient: for instance, in a predictive maintenance context, a manager probably wants to know how each variable should be changed to reduce the costs.
+
+\vspace{1em}
+
+Model independent algorithms, on the contrary, are applicable to any machine learning algorithm, which is a great strength. Their explanations throughout models can be compared, because they have been computed the same way. Yet they also have some limitations.
+
+Among the two model-independent algorithms tested, their main limitation is computation time. Lime is quite fast when computing predictions on one single example, but significantly slower than model dependant explanations. Usually, this does not let the user compute explanations for a large part of the data. Moreover, when dealing with a very large number of features, it is likely that the number of samples should be increased, which makes the computation longer.
+
+Lime:
+- not great on every point --> outliers
+
+explanation vectors:
+- speed
+- not great on every point --> outliers
+- sampling process
+
 \section{Future work}
 
+prout
+
 \section{Conclusion}
+
+:)
 
 
 \nocite{mythos}
